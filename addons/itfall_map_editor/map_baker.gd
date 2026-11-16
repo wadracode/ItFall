@@ -2,7 +2,8 @@
 extends RefCounted
 
 const OUTPUT_DIR := "res://generated_maps"
-const EDGE_TEXTURE := "res://addons/rmsmartshape/documentation/imgs/grass.png"
+const EDGE_TEXTURE := "res://assets/terrain/grassland/grassland_surface_edge.svg"
+const FILL_TEXTURE := "res://assets/terrain/grassland/grassland_fill.svg"
 
 
 static func bake(data, source_path: String = "") -> Dictionary:
@@ -123,23 +124,28 @@ static func _add_smart_shape(root: Node2D, data) -> void:
 	shape.set_point_array(points)
 
 	var material := SS2D_Material_Shape.new()
-	var noise := FastNoiseLite.new()
-	noise.seed = data.seed + 579
-	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
-	noise.frequency = 0.10
-	var fill := NoiseTexture2D.new()
-	fill.width = 256
-	fill.height = 256
-	fill.noise = noise
-	fill.seamless = true
-	var ramp := Gradient.new()
-	ramp.offsets = PackedFloat32Array([0.0, 0.4, 1.0])
-	ramp.colors = PackedColorArray([
-		Color(0.14, 0.31, 0.18),
-		Color(0.23, 0.43, 0.25),
-		Color(0.34, 0.53, 0.30)
-	])
-	fill.color_ramp = ramp
+	# Godot imports SVG as Texture2D. Use ItFall's own grassland texture pack by default.
+	var fill := load(FILL_TEXTURE) as Texture2D
+	if fill == null:
+		push_warning("Grassland SVG fill missing or not imported; using procedural fallback.")
+		var noise := FastNoiseLite.new()
+		noise.seed = data.seed + 579
+		noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		noise.frequency = 0.10
+		var generated := NoiseTexture2D.new()
+		generated.width = 256
+		generated.height = 256
+		generated.noise = noise
+		generated.seamless = true
+		var ramp := Gradient.new()
+		ramp.offsets = PackedFloat32Array([0.0, 0.4, 1.0])
+		ramp.colors = PackedColorArray([
+			Color(0.14, 0.31, 0.18),
+			Color(0.23, 0.43, 0.25),
+			Color(0.34, 0.53, 0.30)
+		])
+		generated.color_ramp = ramp
+		fill = generated
 	var fill_array: Array[Texture2D] = [fill]
 	material.fill_textures = fill_array
 	material.fill_texture_scale = 1.0
