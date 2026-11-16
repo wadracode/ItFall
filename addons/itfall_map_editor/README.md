@@ -119,3 +119,15 @@ Smoke test kiểm tra seed determinism, không mất brush khi phân bố lại 
 - Quy trình đồng bộ thay đổi source từ Scene Editor nếu cần (hiện chưa hỗ trợ).
 
 **Nguyên tắc:** ItFall Map Editor là nơi author terrain. SmartShape2D chỉ là một renderer có thể thay trong tương lai.
+
+
+## Grassland texture defaults (first pass)
+
+The default baker now loads:
+
+- `res://assets/terrain/grassland/grassland_fill.svg` for the green ground **fill**.
+- `res://assets/terrain/grassland/grassland_surface_edge.svg` for the grass **edge**.
+
+These render the green surface down the screen, **without a soil cross-section**. See `assets/terrain/grassland/README.md` for the source texture pack.
+
+**Custom texture import is still not available in the v2 Map Editor UI.** The two above are hard-coded initial defaults and will be replaceable through future material presets. Preview is still schematic; the baked Godot scene shows actual SmartShape textures.
