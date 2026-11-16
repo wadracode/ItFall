@@ -1,0 +1,69 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://addons/rmsmartshape/shapes/shape.gd" id="1_shape"]
+[ext_resource type="Script" path="res://addons/rmsmartshape/shapes/point.gd" id="2_point"]
+[ext_resource type="Script" path="res://addons/rmsmartshape/shapes/point_array.gd" id="3_points"]
+[ext_resource type="Script" path="res://addons/rmsmartshape/materials/shape_material.gd" id="4_material"]
+[ext_resource type="Texture2D" path="res://addons/rmsmartshape/examples/sharp_corner_tapering/assets/tex_metal_fill.png" id="5_fill"]
+
+[sub_resource type="Resource" id="Point_0"]
+script = ExtResource("2_point")
+position = Vector2(-640, 300)
+
+[sub_resource type="Resource" id="Point_1"]
+script = ExtResource("2_point")
+position = Vector2(640, 300)
+
+[sub_resource type="Resource" id="Point_2"]
+script = ExtResource("2_point")
+position = Vector2(640, 620)
+
+[sub_resource type="Resource" id="Point_3"]
+script = ExtResource("2_point")
+position = Vector2(-640, 620)
+
+[sub_resource type="Resource" id="PointArray"]
+script = ExtResource("3_points")
+_points = {
+0: SubResource("Point_0"),
+1: SubResource("Point_1"),
+2: SubResource("Point_2"),
+3: SubResource("Point_3")
+}
+_point_order = PackedInt32Array(0, 1, 2, 3)
+_next_key = 4
+
+[sub_resource type="Resource" id="ShapeMaterial"]
+script = ExtResource("4_material")
+fill_textures = Array[Texture2D]([ExtResource("5_fill")])
+fill_texture_scale = 1.0
+fill_texture_show_behind_parent = true
+
+[node name="Terrain" type="Node2D"]
+position = Vector2(576, 0)
+
+[node name="Background" type="ColorRect" parent="."]
+offset_left = -640.0
+offset_top = 0.0
+offset_right = 640.0
+offset_bottom = 648.0
+mouse_filter = 2
+color = Color(0.055, 0.09, 0.14, 1)
+z_index = -20
+
+[node name="FlatGround" type="Node2D" parent="."]
+texture_repeat = 2
+script = ExtResource("1_shape")
+_points = SubResource("PointArray")
+shape_material = SubResource("ShapeMaterial")
+render_edges = false
+collision_update_mode = 0
+
+[node name="Title" type="Label" parent="."]
+offset_left = -520.0
+offset_top = 40.0
+offset_right = 520.0
+offset_bottom = 90.0
+theme_override_colors/font_color = Color(0.75, 0.86, 0.95, 1)
+theme_override_font_sizes/font_size = 28
+text = "SmartShape2D - Flat Terrain"

@@ -8,11 +8,20 @@
 
 config_version=5
 
+[addons]
+
+ss2d/version="3.3.2"
+
 [application]
 
 config/name="ItFall"
+run/main_scene="res://Terrain.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
 
@@ -22,6 +31,10 @@ window/stretch/aspect="expand"
 [dotnet]
 
 project/assembly_name="ItFall"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/rmsmartshape/plugin.cfg")
 
 [physics]
 

@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Local dev venv used by Godot AI plugin
+.venv/
+/src/
