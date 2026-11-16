@@ -121,14 +121,16 @@ static func _add_smart_shape(root: Node2D, data) -> void:
 		Color(0.34, 0.53, 0.30)
 	])
 	fill.color_ramp = ramp
-	material.fill_textures = [fill]
+	var fill_array: Array[Texture2D] = [fill]
+	material.fill_textures = fill_array
 	material.fill_texture_scale = 1.0
 	material.fill_texture_show_behind_parent = true
 
 	var edge_tex := load(EDGE_TEXTURE) as Texture2D
 	if edge_tex != null:
 		var edge := SS2D_Material_Edge.new()
-		edge.textures = [edge_tex]
+		var edge_array: Array[Texture2D] = [edge_tex]
+		edge.textures = edge_array
 		var meta := SS2D_Material_Edge_Metadata.new()
 		meta.edge_material = edge
 		meta.normal_range = SS2D_NormalRange.new(0.0, 180.0)
