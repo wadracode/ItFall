@@ -1,10 +1,10 @@
 @tool
 extends Control
 
-var _terrain: Resource
+var _terrain
 
 
-func set_terrain(value: Resource) -> void:
+func set_terrain(value) -> void:
 	_terrain = value
 	queue_redraw()
 
