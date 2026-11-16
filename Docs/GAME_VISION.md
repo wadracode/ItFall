@@ -81,3 +81,42 @@
 ## 7. Bước tiếp theo
 
 **Ưu tiên làm rõ Game Vision và gameplay cốt lõi**, sau đó chuyển sang `GAMEPLAY.md` và `WORLD_DESIGN.md`. Kiến trúc kỹ thuật được xây dựng sau khi các yêu cầu gameplay đủ rõ.
+
+
+## 8. Tầm nhìn sandbox emergent — cập nhật từ người sáng tạo
+
+**Định hướng đã được người sáng tạo nêu rõ:**
+
+ItFall không định giới hạn người chơi trong một vài lớp nhân vật, nghề nghiệp hay chuỗi nhiệm vụ cố định. Mọi người bắt đầu từ **tay trắng (nothing)**, có thể khai thác và biến đổi tài nguyên, rồi tự lựa chọn cuộc sống và vai trò của mình trong một thế giới chung.
+
+Những hoạt động được người sáng tạo trực tiếp nêu:
+- Chặt cây, săn bắt, thu thập và chế tác.
+- Xây nhà hàng gần nơi người khác săn quái, cung cấp đồ ăn/dịch vụ cho họ.
+- Xây bệnh viện; phát triển nông trại; mở xưởng sản xuất đồ dùng.
+- Trao đổi hàng hóa và hợp tác hoặc tập hợp để đánh boss.
+
+**Tư tưởng chủ đạo:** Gameplay được hình thành từ tương tác của người chơi, công cụ, tài nguyên, công trình và hệ thống thế giới; không chỉ từ các hoạt động do nhà phát triển viết sẵn. Ví dụ chuỗi hoạt động có thể là: người thu thập → người sản xuất → người kinh doanh → người đi săn → người cung cấp dịch vụ hỗ trợ.
+
+**Lưu ý phạm vi:** Mong muốn 'không giới hạn gameplay' là một **tầm nhìn thiết kế mở**, không phải tuyên bố phần mềm có thể hỗ trợ mọi hành vi bất kỳ. Muốn mở rộng bền vững cần xác định các quy tắc, thành phần tương tác và khả năng kết hợp dùng chung; tính năng mới được thêm từng bước và có tiêu chí kiểm chứng.
+
+### 8.1. Những trụ cột thiết kế được đề xuất để thảo luận (chưa chốt kỹ thuật)
+1. **Common world simulation:** hệ vật phẩm, tài nguyên, thuộc tính, thời gian và quy tắc tương tác nhất quán.
+2. **Actions & skills:** hành động tổng quát như khai thác, sử dụng, chế tạo, xây, vận chuyển, trao đổi, phục vụ; kỹ năng không buộc vào một nghề cố định.
+3. **Compositional crafting & production:** đầu vào → công cụ/quy trình → đầu ra, hỗ trợ chuỗi sản xuất nhiều bước.
+4. **Player-owned spaces:** quyền sở hữu, quyền truy cập, xây dựng và tổ chức địa điểm của người chơi; cần chống xung đột/chiếm đất.
+5. **Services & economy:** giao dịch hàng hóa và dịch vụ, tiêu dùng, nhu cầu; có thể sinh ra vai trò xã hội tự nhiên.
+6. **Persistence & multiplayer authority:** thay đổi thế giới có thể lưu lại, chống gian lận/nhân bản và xử lý khi khu vực ngủ.
+
+### 8.2. Những câu hỏi đặc biệt quan trọng
+- Người chơi có thể sửa **địa hình** hay chỉ đặt/xóa công trình trên đất có sẵn?
+- Có sở hữu đất lâu dài không? Khi vắng mặt, nhà cửa và cửa hàng tồn tại thế nào?
+- Hành động tương tác chạy trên bộ quy tắc/recipe do nhà phát triển chuẩn bị, hay người chơi có thể tự tạo công thức và cơ chế?
+- Bệnh viện chữa bệnh do hệ thống gameplay tạo ra, hay chỉ là công trình mang tính nhập vai?
+- Nhà hàng cần tự vận hành khi chủ offline không? NPC có thể làm nhân viên không?
+- Hàng hóa có độ bền, chất lượng, vận chuyển vật lý và chuỗi cung ứng không?
+- Hệ thống PvP và phá hoại công trình có được phép không? Nếu có, cách bảo vệ không gian riêng tư?
+- Tốc độ phát triển từ tay trắng đến xây dựng cơ sở sản xuất nên nhanh/chậm thế nào?
+- Những hoạt động nào cần mô phỏng trong map đang ngủ và hoạt động nào tính bù thời gian lúc map mở lại?
+
+### 8.3. Cập nhật ưu tiên thiết kế
+**Trước khi chốt terrain/server architecture:** định nghĩa *vòng tương tác nền tảng* (thu thập → biến đổi → tạo vật phẩm/công trình → giao dịch → tạo nhu cầu mới), quy tắc về quyền sở hữu và tính liên tục của thế giới. Điều này quyết định dữ liệu và độ tự do của mọi gameplay về sau.
