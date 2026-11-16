@@ -150,8 +150,7 @@ func _bake_scene() -> void:
 		return
 	_last_scene_path = str(result["scene"])
 	var fs := EditorInterface.get_resource_filesystem()
-	fs.update_file(str(result["data"]))
-	fs.update_file(_last_scene_path)
+	fs.scan()
 	_status.text = "Saved scene: %s\nSaved seed/data: %s" % [result["scene"], result["data"]]
 	EditorInterface.open_scene_from_path(_last_scene_path)
 
