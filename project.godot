@@ -34,7 +34,7 @@ project/assembly_name="ItFall"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/rmsmartshape/plugin.cfg")
+enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/rmsmartshape/plugin.cfg", "res://addons/itfall_map_editor/plugin.cfg")
 
 [physics]
 
