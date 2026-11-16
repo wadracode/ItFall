@@ -1,24 +1,26 @@
 @tool
 extends EditorPlugin
 
-const MapDock = preload("res://addons/itfall_map_editor/editor_dock.gd")
+const MapWindow = preload("res://addons/itfall_map_editor/map_editor_window.gd")
 
-var _dock: EditorDock
+var _map_window: Window
 
 
 func _enter_tree() -> void:
-	_dock = EditorDock.new()
-	_dock.title = "ItFall Maps"
-	_dock.default_slot = EditorDock.DOCK_SLOT_RIGHT_BL
-	var content := MapDock.new()
-	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_dock.add_child(content)
-	add_dock(_dock)
+	add_tool_menu_item("ItFall Map Editor", _open_map_editor)
 
 
 func _exit_tree() -> void:
-	if is_instance_valid(_dock):
-		remove_dock(_dock)
-		_dock.queue_free()
-		_dock = null
+	remove_tool_menu_item("ItFall Map Editor")
+	if is_instance_valid(_map_window):
+		_map_window.queue_free()
+		_map_window = null
+
+
+func _open_map_editor() -> void:
+	if not is_instance_valid(_map_window):
+		_map_window = MapWindow.new()
+		_map_window.visible = false
+		EditorInterface.get_base_control().add_child(_map_window)
+	_map_window.popup_centered(Vector2i(1380, 820))
+	_map_window.grab_focus()
