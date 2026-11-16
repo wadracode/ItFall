@@ -5,7 +5,7 @@ const OUTPUT_DIR := "res://generated_maps"
 const EDGE_TEXTURE := "res://addons/rmsmartshape/documentation/imgs/grass.png"
 
 
-static func bake(data) -> Dictionary:
+static func bake(data, source_path: String = "") -> Dictionary:
 	if data == null or data.ground_points.size() < 3:
 		return {"ok": false, "message": "Generate terrain before baking."}
 
@@ -13,23 +13,40 @@ static func bake(data) -> Dictionary:
 	if folder_error != OK:
 		return {"ok": false, "message": "Cannot create generated_maps directory."}
 
-	var slug := _safe_name(data.map_name)
-	var prefix := "%s/%s_%d" % [OUTPUT_DIR, slug, data.seed]
-	var index := 1
-	while FileAccess.file_exists(prefix + ".tscn") or FileAccess.file_exists(prefix + ".tres"):
-		prefix = "%s/%s_%d_%03d" % [OUTPUT_DIR, slug, data.seed, index]
-		index += 1
-		if index > 999:
-			return {"ok": false, "message": "Too many maps with this name and seed."}
+	var resource_path := ""
+	var scene_path := ""
+	var created_source := false
+	if source_path != "":
+		if not source_path.begins_with("res://") or not source_path.ends_with(".tres"):
+			return {"ok": false, "message": "Invalid editable source path."}
+		resource_path = source_path
+		var scene_base := source_path.get_basename() + "_bake"
+		scene_path = scene_base + ".tscn"
+		var index := 1
+		while FileAccess.file_exists(scene_path):
+			scene_path = scene_base + "_%03d.tscn" % index
+			index += 1
+			if index > 999:
+				return {"ok": false, "message": "Too many baked versions."}
+	else:
+		var slug := _safe_name(data.map_name)
+		var prefix := "%s/%s_%d" % [OUTPUT_DIR, slug, data.seed]
+		var index := 1
+		while FileAccess.file_exists(prefix + ".tscn") or FileAccess.file_exists(prefix + ".tres"):
+			prefix = "%s/%s_%d_%03d" % [OUTPUT_DIR, slug, data.seed, index]
+			index += 1
+			if index > 999:
+				return {"ok": false, "message": "Too many maps with this name and seed."}
+		resource_path = prefix + ".tres"
+		scene_path = prefix + ".tscn"
+		created_source = true
 
-	var resource_path := prefix + ".tres"
-	var scene_path := prefix + ".tscn"
-	var save_error := ResourceSaver.save(data, resource_path)
-	if save_error != OK:
-		return {"ok": false, "message": "Unable to save map data (%d)." % save_error}
+	var resource_error := ResourceSaver.save(data, resource_path)
+	if resource_error != OK:
+		return {"ok": false, "message": "Unable to save map data (%d)." % resource_error}
 
 	var scene_root := Node2D.new()
-	scene_root.name = "Map_" + slug
+	scene_root.name = "Map_" + _safe_name(data.map_name)
 	scene_root.set_meta("map_data_path", resource_path)
 
 	_add_background(scene_root, data)
@@ -41,12 +58,14 @@ static func bake(data) -> Dictionary:
 	var pack_error := packed.pack(scene_root)
 	scene_root.free()
 	if pack_error != OK:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(resource_path))
+		if created_source:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(resource_path))
 		return {"ok": false, "message": "Cannot pack scene (%d)." % pack_error}
 
 	var scene_error := ResourceSaver.save(packed, scene_path)
 	if scene_error != OK:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(resource_path))
+		if created_source:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(resource_path))
 		return {"ok": false, "message": "Cannot save scene (%d)." % scene_error}
 
 	return {"ok": true, "scene": scene_path, "data": resource_path}
