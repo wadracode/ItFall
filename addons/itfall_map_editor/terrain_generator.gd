@@ -35,17 +35,22 @@ static func create(settings: Dictionary) -> Resource:
 		var noise_value := hills.get_noise_1d(x) + detail.get_noise_1d(x) * 0.18
 		data.ground_points.append(Vector2(x, data.base_y + noise_value * data.hill_amplitude * border_weight))
 
+	regenerate_props(data)
+	return data
+
+
+static func regenerate_props(data) -> void:
+	if data == null or data.ground_points.size() < 2:
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = (data.seed + 41279) & 0x7fffffff
+	data.tree_points = PackedVector2Array()
+	data.rock_points = PackedVector2Array()
 	var tree_count := int(round(float(data.width_px) / 1000.0 * data.trees_per_km))
 	var rock_count := int(round(float(data.width_px) / 1000.0 * data.rocks_per_km))
-
 	for i in range(tree_count):
 		var x := rng.randf_range(180.0, float(data.width_px) - 180.0)
 		data.tree_points.append(Vector2(x, data.ground_y_at(x)))
-
 	for i in range(rock_count):
 		var x := rng.randf_range(80.0, float(data.width_px) - 80.0)
 		data.rock_points.append(Vector2(x, data.ground_y_at(x)))
-
-	return data
