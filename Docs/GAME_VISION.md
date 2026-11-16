@@ -120,3 +120,44 @@ Những hoạt động được người sáng tạo trực tiếp nêu:
 
 ### 8.3. Cập nhật ưu tiên thiết kế
 **Trước khi chốt terrain/server architecture:** định nghĩa *vòng tương tác nền tảng* (thu thập → biến đổi → tạo vật phẩm/công trình → giao dịch → tạo nhu cầu mới), quy tắc về quyền sở hữu và tính liên tục của thế giới. Điều này quyết định dữ liệu và độ tự do của mọi gameplay về sau.
+
+
+## 9. Nghiên cứu, thử nghiệm và thành quả dài hạn — cập nhật từ người sáng tạo
+
+**Định hướng đã nêu rõ:** ItFall cần giới hạn hợp lý số hành động trực tiếp với vật phẩm, trong khi chiều sâu gameplay đến từ **quá trình khám phá, nghiên cứu, tiêu hao nguyên liệu, thời gian và tỷ lệ thành công**. Người chơi phải đầu tư công sức đáng kể mới đạt được thành quả có giá trị.
+
+### 9.1. Ví dụ quả táo / nghề đầu bếp
+
+Quả táo **không cần có vô số cơ chế riêng**. Ở mức tương tác cơ bản có thể chỉ cần:
+- **Tiêu thụ**: sử dụng quả táo trực tiếp.
+- **Nghiên cứu / thử nghiệm**: dùng quả táo làm nguyên liệu để tìm ra cách chế biến.
+
+Người đầu bếp không mặc nhiên biết mọi món ăn từ đầu. Thử nghiệm tiêu hao nguyên liệu, thời gian và có xác suất thành công. Khi tìm ra món mới, món ăn có thể cung cấp **hiệu ứng buff** và trở thành sản phẩm có giá trị để sử dụng hoặc giao thương.
+
+**Ý nghĩa:** giới hạn số thao tác nguyên thủy để dễ xây dựng hệ thống; mở rộng sự đa dạng bằng nội dung có thể khám phá, quá trình tiến bộ và những kết quả kết hợp được.
+
+### 9.2. Tư tưởng gameplay đang hình thành
+
+- **Bắt đầu từ tay trắng** và hiểu biết hạn chế.
+- **Không cho sẵn mọi công thức / năng lực.**
+- **Đầu tư thời gian, nguyên liệu và công sức** để khám phá công thức, quy trình hoặc kỹ năng mới.
+- **Thành quả có ý nghĩa**: hiệu ứng, chất lượng, hiệu suất, công dụng hoặc lợi thế trong nền kinh tế người chơi.
+- **Từ khám phá cá nhân đến xã hội**: người nghiên cứu có thể sản xuất, dùng, bán sản phẩm hoặc chia sẻ bí quyết — các quyền chia sẻ/bí mật chưa quyết định.
+
+### 9.3. Ví dụ khái quát (đề xuất để thảo luận, chưa chốt)
+
+Vòng lặp: **Thu thập → Thử nghiệm → Thất bại/học hỏi → Khám phá → Chế tạo → Sử dụng/giao thương → Nghiên cứu sâu hơn**.
+
+Có thể áp dụng về sau cho nấu ăn, luyện kim, y dược, nông nghiệp, chế tạo công cụ; không mặc định tất cả đều dùng một minigame hoặc cùng một công thức xác suất.
+
+### 9.4. Các quyết định còn mở
+
+1. Khám phá công thức là **cá nhân**, theo nhóm hay công thức được cộng đồng biết chung?
+2. Người chơi có thể **mua/trao đổi bí quyết** hay chỉ mua thành phẩm?
+3. Thất bại là mất trắng hay vẫn **tăng kiến thức / thông tin** để giảm RNG thuần túy?
+4. Nghiên cứu thành công tạo **công thức cố định** hay một biến thể do tham số/nguyên liệu?
+5. Buff và thành quả có giới hạn cân bằng nào để không khóa người mới khỏi nền kinh tế?
+6. Tiến trình nghiên cứu cần nhân vật online hay có thể chạy trong lúc offline?
+7. Công thức là dữ liệu do nhà phát triển thiết kế hay có thể phát sinh từ tổ hợp quy tắc?
+
+> **Không đồng nhất “mất nhiều thời gian” với “lặp lại nhàm chán”.** Đây là rủi ro thiết kế cần kiểm thử, không phải thay đổi tầm nhìn về thành quả khó đạt.
