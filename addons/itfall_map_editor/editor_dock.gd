@@ -10,7 +10,7 @@ var _fields: Dictionary = {}
 var _preview: Control
 var _status: Label
 var _last_scene_path := ""
-var _data: Resource
+var _data
 
 
 func _ready() -> void:
