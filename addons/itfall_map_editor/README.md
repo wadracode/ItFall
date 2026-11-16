@@ -23,7 +23,7 @@ ItFall Map Editor (cửa sổ riêng trong Godot)
 
 1. Pull project `wadracode/ItFall`.
 2. Mở bằng **Godot 4.7**.
-3. Trong **Project → Project Settings → Plugins**, bật **SmartShape2D** và **ItFall Map Editor**.
+3. SmartShape2D và ItFall Map Editor đã được bật trong `project.godot`. Nếu plugin bị tắt trên máy của bạn, hãy bật lại trong **Project → Project Settings → Plugins**.
 4. Trên thanh menu của Godot, chọn **Project → Tools → ItFall Map Editor** (vị trí menu Tools có thể thay đổi theo bố cục Editor).
 5. Cửa sổ `ItFall Map Editor v2 | Terrain Workspace` xuất hiện.
 
