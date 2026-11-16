@@ -259,10 +259,20 @@ func _sync_fields_from_data() -> void:
 
 
 func _on_settings_changed(_value: Variant = null) -> void:
-	if _syncing_fields:
+	if _syncing_fields or _data == null:
 		return
-	_settings_pending = true
-	_set_status("Settings changed. Press Generate to replace terrain, or Redistribute objects to keep sculpting.")
+	var desired_name := _map_name.text.strip_edges()
+	if desired_name == "":
+		desired_name = "Grassland_AB"
+	if _data.map_name != desired_name:
+		_data.map_name = desired_name
+		_dirty = true
+	_settings_pending = _terrain_settings_differ() or _prop_settings_differ()
+	_refresh_info()
+	if _settings_pending:
+		_set_status("Parameters pending. Generate for terrain changes; Redistribute for trees/rocks.")
+	else:
+		_set_status("Map name updated. Save or Bake when ready.")
 
 
 func _new_map() -> void:
@@ -338,7 +348,7 @@ func _request_close() -> void:
 
 
 func _open_file() -> void:
-	_confirm_or_perform("open")
+	_open_dialog.popup_centered_ratio(0.8)
 
 
 func _open_selected(path: String) -> void:
@@ -354,10 +364,10 @@ func _load_map(path: String) -> void:
 	if loaded == null or loaded.get_script() != DataScript:
 		_set_status("Not an ItFall terrain data .tres: " + path)
 		return
-	_data = loaded
-	if _data.ground_points.size() < 3:
+	if loaded.ground_points.size() < 3:
 		_set_status("Invalid terrain data: not enough terrain samples.")
 		return
+	_data = loaded
 	_source_path = path
 	_last_scene = ""
 	_dirty = false
@@ -449,6 +459,12 @@ func _redistribute() -> void:
 	_canvas.queue_redraw()
 	_refresh_info()
 	_set_status("Repositioned trees and rocks without regenerating terrain.")
+
+
+func _prop_settings_differ() -> bool:
+	if _data == null:
+		return false
+	return not is_equal_approx((_fields["trees_per_km"] as SpinBox).value, _data.trees_per_km) or not is_equal_approx((_fields["rocks_per_km"] as SpinBox).value, _data.rocks_per_km)
 
 
 func _terrain_settings_differ() -> bool:
