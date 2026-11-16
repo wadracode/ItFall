@@ -234,3 +234,22 @@ Nguyên tắc thiết kế cần mang theo khi làm kiến trúc (chưa quyết 
 - Người nhận công thức được sao chép toàn bộ chỉ số, có thể cải tiến riêng, hay chỉ nhận quyền chế tạo?
 - Item rơi tồn tại bao lâu; công trình/tài sản offline có điều kiện hết hạn hay bảo trì không?
 - Những thay đổi nào cần nhật ký chi tiết và khả năng rollback? Chính sách xử lý gian lận ở mức cá nhân hay toàn bộ giao dịch liên quan?
+
+
+## 12. Giới hạn phạm vi thiết kế hiện tại — xác nhận từ người sáng tạo
+
+**Quyết định quy trình:** Dừng phân tích chi tiết từng gameplay (ví dụ xác suất nghiên cứu, cách thất bại, chỉ số công thức hay cân bằng nghề nghiệp). Hiện tại chỉ ghi nhận **phương hướng chính**; cần thiết kế nhiều nền tảng thế giới và kỹ thuật trước khi triển khai gameplay cụ thể.
+
+### Phạm vi được ưu tiên thảo luận
+1. World topology: nút địa lý, tuyến map, các khu vực kết nối.
+2. Procedural terrain và cách thể hiện môi trường 2.5D có thể sản xuất quy mô lớn.
+3. Map/chunk lifecycle: tải, kích hoạt, ngủ và dọn dẹp tài nguyên.
+4. Multiplayer foundation: phân bố người chơi, đồng bộ và quyền quyết định của server.
+5. Persistence: lưu trạng thái thế giới, vật phẩm, công trình và phục hồi sau sự cố.
+6. Entity/interaction foundation: các năng lực dùng chung có thể mở rộng.
+7. Security foundation: kiểm soát vật phẩm, phát hiện bất thường và audit.
+8. Gameplay framework chỉ ở mức mục tiêu tương thích và khả năng mở rộng.
+
+**Chưa làm ở giai đoạn này:** thuật toán nghiên cứu, bộ công thức, xác suất, cân bằng buff, chi tiết nghề, UI sản xuất, cơ chế chia sẻ công thức.
+
+**Quy tắc cho tài liệu tiếp theo:** mô tả mục tiêu, ràng buộc, phương án, đánh đổi, câu hỏi mở; không tự suy diễn cơ chế gameplay chi tiết thành quyết định cuối cùng.
