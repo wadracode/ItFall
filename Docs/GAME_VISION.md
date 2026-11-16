@@ -196,3 +196,41 @@ Có thể áp dụng về sau cho nấu ăn, luyện kim, y dược, nông nghi�
 - Cơ chế cân bằng nào hạn chế xuất hiện một công thức vượt trội tuyệt đối?
 
 > Chưa chỉ định cấu trúc dữ liệu hoặc thuật toán sinh chỉ số cho đến khi các câu hỏi thiết kế được chốt.
+
+
+## 11. Quyết định: phát triển công thức, chia sẻ tri thức và an toàn server
+
+### 11.1. Quyết định đã xác nhận — hướng C
+Người chơi có **hai con đường song song** sau khi khám phá một công thức:
+- **Cải tiến công thức hiện có:** nghiên cứu tiếp để điều chỉnh hoặc tăng chất lượng/thuộc tính, theo các giới hạn và chi phí sẽ được thiết kế sau.
+- **Nghiên cứu công thức mới:** tìm một biến thể khác từ nguyên liệu, định hướng và thử nghiệm mới.
+
+Điều này không mặc định cải tiến luôn thành công hay luôn tăng sức mạnh; cơ chế rủi ro, đánh đổi và giới hạn tăng trưởng **chưa chốt**.
+
+### 11.2. Chia sẻ công thức — tính năng hậu kỳ
+- Có định hướng cho phép **người B nhận công thức từ người A**.
+- Cách chia sẻ (tặng, giao dịch, truyền dạy, sao chép, cấp quyền) **chưa quyết định**.
+- **Không ưu tiên triển khai sớm.** Tuy vậy, từ đầu nên phân biệt *định danh công thức*, *người khám phá/tạo*, *người sở hữu/quyền sử dụng* và *lịch sử thay đổi*, để không phải viết lại dữ liệu khi thêm tính năng chia sẻ.
+
+### 11.3. An toàn hệ thống là yêu cầu nền tảng, không phải DLC
+**Yêu cầu người sáng tạo:** có anti-cheat hoặc ít nhất là cơ chế phát hiện gian lận, kiểm soát/dọn dẹp vật phẩm và trạng thái server.
+
+Nguyên tắc thiết kế cần mang theo khi làm kiến trúc (chưa quyết định công nghệ cụ thể):
+1. **Server-authoritative:** server xác minh hành động làm thay đổi tài nguyên, vật phẩm, nghiên cứu, crafting, giao dịch và vị trí/tương tác quan trọng; client không được tự quyết định kết quả có giá trị.
+2. **Item lifecycle & integrity:** vật phẩm có định danh/trạng thái/quyền sở hữu phù hợp; quy tắc tạo, chuyển, tiêu thụ, rơi, hết hạn và xóa rõ ràng; chống nhân bản vật phẩm.
+3. **Atomicity & idempotency:** xử lý việc trừ nguyên liệu và sinh kết quả như một thao tác toàn vẹn; gửi lại yêu cầu hoặc mất kết nối không được tạo thêm vật phẩm.
+4. **Audit & anomaly detection:** ghi vết giao dịch/nguồn phát sinh tài sản và tín hiệu bất thường (tốc độ thu thập, sản lượng vượt ngưỡng, thao tác không hợp lệ) để phát hiện, điều tra và khôi phục; không giả định có thể ngăn 100% cheat.
+5. **World cleanup:** xác định chính sách dọn vật phẩm rơi, entity không có chủ, job hết hạn và trạng thái cũ; **không tùy tiện xóa tài sản bền vững** của người chơi.
+6. **Persistence & recovery:** save/restore an toàn khi map ngủ, tắt server hoặc chuyển map; bảo vệ trước crash, rollback và lặp sự kiện.
+7. **Abuse management:** mức quyền, giới hạn tần suất yêu cầu, phát hiện bot/automation, nhật ký xử lý và công cụ quản trị; chính sách xử lý vi phạm cần quyết định riêng.
+
+### 11.4. Phân kỳ triển khai — đề xuất
+- **Ngay từ prototype có lưu vật phẩm:** quy tắc server authority, vòng đời vật phẩm, giao dịch nhất quán và kiểm thử lỗi mất mạng/copy vật phẩm.
+- **Khi multiplayer phát triển:** logging, theo dõi bất thường, xác minh dữ liệu giữa các map, công cụ xử lý incident và garbage collection có chính sách.
+- **Sau khi core gameplay ổn định:** giao diện chia sẻ/chuyển giao công thức, thị trường tri thức, chống gian lận chuyên sâu tùy loại hành vi.
+
+### 11.5. Câu hỏi còn mở
+- Cải tiến công thức có tạo **phiên bản mới bất biến** hay ghi đè phiên bản cũ?
+- Người nhận công thức được sao chép toàn bộ chỉ số, có thể cải tiến riêng, hay chỉ nhận quyền chế tạo?
+- Item rơi tồn tại bao lâu; công trình/tài sản offline có điều kiện hết hạn hay bảo trì không?
+- Những thay đổi nào cần nhật ký chi tiết và khả năng rollback? Chính sách xử lý gian lận ở mức cá nhân hay toàn bộ giao dịch liên quan?
