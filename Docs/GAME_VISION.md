@@ -161,3 +161,38 @@ Có thể áp dụng về sau cho nấu ăn, luyện kim, y dược, nông nghi�
 7. Công thức là dữ liệu do nhà phát triển thiết kế hay có thể phát sinh từ tổ hợp quy tắc?
 
 > **Không đồng nhất “mất nhiều thời gian” với “lặp lại nhàm chán”.** Đây là rủi ro thiết kế cần kiểm thử, không phải thay đổi tầm nhìn về thành quả khó đạt.
+
+
+## 10. Công thức độc bản và định hướng nghiên cứu — cập nhật từ người sáng tạo
+
+**Định hướng đã nêu rõ:** Mỗi công thức được khám phá là một **bản riêng có thông số riêng**, không chỉ là mở khóa cùng một công thức chuẩn cho tất cả người chơi.
+
+### 10.1. Ví dụ món bánh táo
+- Món **bánh táo** có thể có **5 thuộc tính được xác định theo loại món** (chưa chốt tên và cơ chế các thuộc tính).
+- Người chơi A và B đều có thể khám phá bánh táo, nhưng **phân bổ điểm thuộc tính khác nhau**.
+- Kết quả nghiên cứu chịu ảnh hưởng bởi **tổ hợp nguyên liệu đầu vào** và **phương hướng nghiên cứu** mà người chơi chọn.
+- Vì vậy, bản bánh táo của A có thể mạnh ở một vài thuộc tính, còn bản của B mạnh ở thuộc tính khác.
+- Việc nghiên cứu thành công không chỉ mở khóa **loại vật phẩm**, mà tạo ra **một biến thể công thức** có tính chất riêng của người nghiên cứu.
+
+### 10.2. Phân biệt ba tầng khái niệm (đề xuất cách ghi nhận)
+1. **Loại sản phẩm:** Ví dụ bánh táo; quy định nhóm và danh mục thuộc tính có thể có.
+2. **Công thức được khám phá:** Bản công thức của người chơi, ghi nhận nguyên liệu/phương hướng nghiên cứu và cấu hình thuộc tính đã khám phá.
+3. **Thành phẩm:** Vật phẩm được sản xuất từ công thức; cần thảo luận liệu chất lượng nguyên liệu/kỹ năng sản xuất có tiếp tục ảnh hưởng đến chỉ số từng chiếc bánh hay không.
+
+### 10.3. Hệ quả gameplay có thể khai thác
+- Chuyên môn hóa dựa trên **định hướng nghiên cứu** thay vì chỉ tên nghề.
+- Cùng sản phẩm nhưng có nhiều phân khúc và công dụng → tăng cơ hội giao thương.
+- Công thức tốt có thể tạo thương hiệu cho người nghiên cứu/nhà sản xuất.
+- Không nhất thiết có một công thức tối ưu cho mọi tình huống nếu các thuộc tính có đánh đổi hợp lý.
+
+### 10.4. Những câu hỏi chưa chốt
+- Công thức có thể được sao chép, mua bán hoặc truyền dạy không? Nếu có, người mua nhận đúng chỉ số hay phải tái nghiên cứu?
+- Công thức có thật sự **duy nhất trên toàn server** hay là bản cá nhân có thông số riêng (có thể vô tình trùng)?
+- Mỗi loại món luôn có 5 thuộc tính hay đây chỉ là ví dụ cho bánh táo?
+- Tổng điểm thuộc tính là **ngân sách cố định** hay nguyên liệu/nghiên cứu có thể tăng cả tổng điểm?
+- Tính ngẫu nhiên, kỹ năng và lựa chọn định hướng đóng góp tỷ trọng ra sao?
+- Có thể nâng cấp/chỉnh sửa công thức đã khám phá, hay phải nghiên cứu ra công thức mới?
+- Thành phẩm có cố định hoàn toàn theo công thức hay biến thiên theo chất lượng sản xuất?
+- Cơ chế cân bằng nào hạn chế xuất hiện một công thức vượt trội tuyệt đối?
+
+> Chưa chỉ định cấu trúc dữ liệu hoặc thuật toán sinh chỉ số cho đến khi các câu hỏi thiết kế được chốt.
