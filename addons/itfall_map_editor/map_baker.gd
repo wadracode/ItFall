@@ -5,7 +5,7 @@ const OUTPUT_DIR := "res://generated_maps"
 const EDGE_TEXTURE := "res://addons/rmsmartshape/documentation/imgs/grass.png"
 
 
-static func bake(data: Resource) -> Dictionary:
+static func bake(data) -> Dictionary:
 	if data == null or data.ground_points.size() < 3:
 		return {"ok": false, "message": "Generate terrain before baking."}
 
@@ -70,7 +70,7 @@ static func _add_owned(parent: Node, child: Node, root: Node) -> void:
 	child.owner = root
 
 
-static func _add_background(root: Node2D, data: Resource) -> void:
+static func _add_background(root: Node2D, data) -> void:
 	var sky := Polygon2D.new()
 	sky.name = "SkyBackground"
 	sky.z_index = -100
@@ -86,7 +86,7 @@ static func _add_background(root: Node2D, data: Resource) -> void:
 	_add_owned(root, sky, root)
 
 
-static func _add_smart_shape(root: Node2D, data: Resource) -> void:
+static func _add_smart_shape(root: Node2D, data) -> void:
 	var shape := SS2D_Shape.new()
 	shape.name = "SmartShapeGround"
 	shape.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -154,7 +154,7 @@ static func _add_smart_shape(root: Node2D, data: Resource) -> void:
 	shape.collision_polygon_node_path = NodePath("../GroundCollision/SolidGround")
 
 
-static func _add_environment(root: Node2D, data: Resource) -> void:
+static func _add_environment(root: Node2D, data) -> void:
 	var environment := Node2D.new()
 	environment.name = "Environment"
 	_add_owned(root, environment, root)
@@ -210,7 +210,7 @@ static func _polygon(parent: Node, root: Node, name: String, verts: PackedVector
 	_add_owned(parent, polygon, root)
 
 
-static func _add_spawns(root: Node2D, data: Resource) -> void:
+static func _add_spawns(root: Node2D, data) -> void:
 	var points := Node2D.new()
 	points.name = "SpawnPoints"
 	_add_owned(root, points, root)
