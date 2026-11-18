@@ -153,7 +153,7 @@ func _begin_edit(screen: Vector2, alt_pressed: bool) -> void:
 		if world.x <= 0.0 or world.x >= float(data.width_px):
 			return
 		for point in data.anchors:
-			if absf(point.x - world.x) < data.MIN_ANCHOR_SPACING:
+			if absf(point.x - world.x) < 24.0:
 				return
 		edit_started.emit()
 		var added: int = data.insert_anchor(world)
