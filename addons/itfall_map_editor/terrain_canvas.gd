@@ -1,29 +1,34 @@
 @tool
 extends Control
 
-signal stroke_started(world_position: Vector2)
-signal stroke_moved(world_position: Vector2)
-signal stroke_finished()
+signal edit_started()
+signal edit_changed()
+signal edit_finished()
+signal undo_requested()
+signal redo_requested()
 
-const COLORS := {
-	"sky": Color(0.52, 0.73, 0.80),
-	"hill": Color(0.31, 0.53, 0.40),
-	"ground": Color(0.20, 0.41, 0.27),
-	"grass": Color(0.47, 0.75, 0.40),
-	"grid": Color(0.90, 0.98, 0.94, 0.13)
-}
+const SKY := Color(0.56, 0.75, 0.81)
+const GROUND := Color(0.22, 0.43, 0.30)
+const GRASS := Color(0.60, 0.82, 0.43)
+const GRID := Color(0.95, 0.99, 0.98, 0.18)
+const ANCHOR := Color(0.98, 0.98, 0.99)
+const SELECTED := Color(1.0, 0.79, 0.27)
+const HANDLE := Color(0.99, 0.55, 0.35)
+const HIT_RADIUS := 11.0
 
 var data
-var tool_mode: String = "Pan"
-var brush_radius: float = 190.0
-var show_grid: bool = true
+var tool_mode := "Pen"
+var show_grid := true
+var selected_index := -1
+var camera_position := Vector2(4000.0, 280.0)
+var zoom := 0.3
 
-var camera_position: Vector2 = Vector2(4000.0, 280.0)
-var zoom: float = 0.3
 var _panning := false
-var _painting := false
+var _drag_mode := ""
+var _drag_index := -1
 var _mouse := Vector2.ZERO
 var _mouse_over := false
+var _alt_break_tangent := false
 
 
 func _ready() -> void:
@@ -35,6 +40,9 @@ func _ready() -> void:
 
 func set_data(value, fit_view: bool = false) -> void:
 	data = value
+	selected_index = -1
+	_drag_mode = ""
+	_drag_index = -1
 	if fit_view:
 		call_deferred("fit_to_data")
 	queue_redraw()
@@ -43,8 +51,8 @@ func set_data(value, fit_view: bool = false) -> void:
 func fit_to_data() -> void:
 	if data == null or size.x < 1.0:
 		return
-	zoom = clampf((size.x - 90.0) / float(data.width_px), 0.045, 3.0)
-	camera_position = Vector2(float(data.width_px) * 0.5, data.base_y + 110.0)
+	zoom = clampf((size.x - 90.0) / maxf(1.0, float(data.width_px)), 0.045, 4.0)
+	camera_position = Vector2(float(data.width_px) * 0.5, data.base_y + 120.0)
 	queue_redraw()
 
 
@@ -59,43 +67,151 @@ func _to_world(screen: Vector2) -> Vector2:
 func _gui_input(event: InputEvent) -> void:
 	if data == null:
 		return
+	if event is InputEventKey:
+		var key: InputEventKey = event
+		if key.pressed and not key.echo:
+			if (key.ctrl_pressed or key.meta_pressed) and key.keycode == KEY_Z:
+				if key.shift_pressed:
+					redo_requested.emit()
+				else:
+					undo_requested.emit()
+				accept_event()
+			elif (key.ctrl_pressed or key.meta_pressed) and key.keycode == KEY_Y:
+				redo_requested.emit()
+				accept_event()
+			elif key.keycode == KEY_DELETE or key.keycode == KEY_BACKSPACE:
+				delete_selected()
+				accept_event()
+		return
+
 	if event is InputEventMouseButton:
-		var mouse_button: InputEventMouseButton = event
-		_mouse = mouse_button.position
+		var button: InputEventMouseButton = event
+		_mouse = button.position
 		_mouse_over = true
-		if mouse_button.button_index == MOUSE_BUTTON_WHEEL_UP and mouse_button.pressed:
-			_zoom_at(1.16, mouse_button.position)
+		if button.button_index == MOUSE_BUTTON_WHEEL_UP and button.pressed:
+			_zoom_at(1.16, button.position)
 			accept_event()
-		elif mouse_button.button_index == MOUSE_BUTTON_WHEEL_DOWN and mouse_button.pressed:
-			_zoom_at(1.0 / 1.16, mouse_button.position)
+		elif button.button_index == MOUSE_BUTTON_WHEEL_DOWN and button.pressed:
+			_zoom_at(1.0 / 1.16, button.position)
 			accept_event()
-		elif mouse_button.button_index == MOUSE_BUTTON_RIGHT:
-			_panning = mouse_button.pressed
+		elif button.button_index == MOUSE_BUTTON_RIGHT or button.button_index == MOUSE_BUTTON_MIDDLE:
+			_panning = button.pressed
 			accept_event()
-		elif mouse_button.button_index == MOUSE_BUTTON_LEFT:
-			if mouse_button.pressed:
+		elif button.button_index == MOUSE_BUTTON_LEFT:
+			if button.pressed:
+				grab_focus()
 				if tool_mode == "Pan":
 					_panning = true
 				else:
-					_painting = true
-					stroke_started.emit(_to_world(mouse_button.position))
+					_begin_edit(button.position, button.alt_pressed)
 			else:
-				if _painting:
-					stroke_finished.emit()
-				_painting = false
-				_panning = false
+				if _drag_mode != "":
+					edit_finished.emit()
+				_drag_mode = ""
+				_drag_index = -1
+				if tool_mode == "Pan":
+					_panning = false
+			queue_redraw()
 			accept_event()
-	elif event is InputEventMouseMotion:
-		var movement: InputEventMouseMotion = event
-		_mouse = movement.position
+
+	if event is InputEventMouseMotion:
+		var motion: InputEventMouseMotion = event
+		_mouse = motion.position
 		_mouse_over = true
 		if _panning:
-			camera_position -= movement.relative / zoom
-		elif _painting:
-			stroke_moved.emit(_to_world(movement.position))
-		queue_redraw()
-		if _painting or _panning:
+			camera_position -= motion.relative / zoom
 			accept_event()
+		elif _drag_mode != "":
+			_update_edit(motion.position, motion.alt_pressed)
+			accept_event()
+		queue_redraw()
+
+
+func _begin_edit(screen: Vector2, alt_pressed: bool) -> void:
+	var anchor_index: int = _hit_anchor(screen)
+	var handle: String = _hit_selected_handle(screen)
+	_alt_break_tangent = alt_pressed
+
+	if tool_mode == "Pen":
+		if anchor_index >= 0:
+			selected_index = anchor_index
+			_drag_index = anchor_index
+			# Clicking an existing anchor and dragging adjusts its outgoing tangent.
+			_drag_mode = "out" if anchor_index < data.anchors.size() - 1 else "in"
+			edit_started.emit()
+			return
+		var world: Vector2 = _to_world(screen)
+		if world.x <= 0.0 or world.x >= float(data.width_px):
+			return
+		edit_started.emit()
+		var added: int = data.insert_anchor(world)
+		if added < 0:
+			edit_finished.emit()
+			return
+		selected_index = added
+		_drag_index = added
+		_drag_mode = "out"
+		edit_changed.emit()
+		return
+
+	# Edit mode: drag an anchor to reposition, or drag one of its tangent handles.
+	if handle != "":
+		_drag_index = selected_index
+		_drag_mode = handle
+		edit_started.emit()
+	elif anchor_index >= 0:
+		selected_index = anchor_index
+		_drag_index = anchor_index
+		_drag_mode = "anchor"
+		edit_started.emit()
+	else:
+		selected_index = -1
+
+
+func _update_edit(screen: Vector2, alt_pressed: bool) -> void:
+	if _drag_index < 0:
+		return
+	var world: Vector2 = _to_world(screen)
+	match _drag_mode:
+		"anchor":
+			data.move_anchor(_drag_index, world)
+		"in":
+			data.set_handle(_drag_index, false, world, not (alt_pressed or _alt_break_tangent))
+		"out":
+			data.set_handle(_drag_index, true, world, not (alt_pressed or _alt_break_tangent))
+	edit_changed.emit()
+
+
+func _hit_anchor(screen: Vector2) -> int:
+	# Screen-space radius remains usable across all zoom levels.
+	for i in range(data.anchors.size()):
+		if _to_screen(data.anchors[i]).distance_to(screen) <= HIT_RADIUS:
+			return i
+	return -1
+
+
+func _hit_selected_handle(screen: Vector2) -> String:
+	if selected_index < 0 or selected_index >= data.anchors.size():
+		return ""
+	var anchor: Vector2 = data.anchors[selected_index]
+	if selected_index > 0 and data.handles_in[selected_index].length() > 0.01:
+		if _to_screen(anchor + data.handles_in[selected_index]).distance_to(screen) <= HIT_RADIUS:
+			return "in"
+	if selected_index < data.anchors.size() - 1 and data.handles_out[selected_index].length() > 0.01:
+		if _to_screen(anchor + data.handles_out[selected_index]).distance_to(screen) <= HIT_RADIUS:
+			return "out"
+	return ""
+
+
+func delete_selected() -> void:
+	if data == null or selected_index <= 0 or selected_index >= data.anchors.size() - 1:
+		return
+	edit_started.emit()
+	if data.delete_anchor(selected_index):
+		selected_index = -1
+		edit_changed.emit()
+		edit_finished.emit()
+		queue_redraw()
 
 
 func _on_mouse_exited() -> void:
@@ -103,95 +219,97 @@ func _on_mouse_exited() -> void:
 	queue_redraw()
 
 
-func _zoom_at(factor: float, screen_position: Vector2) -> void:
-	var anchor: Vector2 = _to_world(screen_position)
-	zoom = clampf(zoom * factor, 0.045, 3.0)
-	camera_position = anchor - (screen_position - size * 0.5) / zoom
+func _zoom_at(factor: float, screen: Vector2) -> void:
+	var world: Vector2 = _to_world(screen)
+	zoom = clampf(zoom * factor, 0.045, 4.0)
+	camera_position = world - (screen - size * 0.5) / zoom
 	queue_redraw()
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), COLORS["sky"])
+	draw_rect(Rect2(Vector2.ZERO, size), SKY)
 	if data == null or data.ground_points.size() < 2:
-		_caption("No map loaded. Press Generate.")
+		_caption("No terrain. Choose New Flat Map.")
 		return
 	_draw_grid()
-	_draw_terrain()
-	_draw_decorations()
+	_draw_ground()
 	_draw_markers()
-	_draw_brush()
-	_caption("%s | Seed %d | %d px | %0.2fx" % [data.map_name, data.seed, data.width_px, zoom])
+	_draw_anchors()
+	_caption("%s  |  %d px  |  %d anchors  |  %.2fx  |  %s" % [
+		data.map_name, data.width_px, data.anchors.size(), zoom, tool_mode
+	])
 
 
 func _draw_grid() -> void:
 	if not show_grid:
 		return
-	var min_world: Vector2 = _to_world(Vector2.ZERO)
-	var max_world: Vector2 = _to_world(size)
-	var grid_spacing := 500.0
-	var first_x := floorf(min_world.x / grid_spacing) * grid_spacing
-	var x := first_x
-	var loops := 0
-	while x <= max_world.x and loops < 140:
-		var screen_x: float = _to_screen(Vector2(x, 0.0)).x
-		draw_line(Vector2(screen_x, 0.0), Vector2(screen_x, size.y), COLORS["grid"], 1.0)
-		x += grid_spacing
-		loops += 1
-	var first_y := floorf(min_world.y / grid_spacing) * grid_spacing
-	var y := first_y
-	loops = 0
-	while y <= max_world.y and loops < 140:
-		var screen_y: float = _to_screen(Vector2(0.0, y)).y
-		draw_line(Vector2(0.0, screen_y), Vector2(size.x, screen_y), COLORS["grid"], 1.0)
-		y += grid_spacing
-		loops += 1
+	var top_left: Vector2 = _to_world(Vector2.ZERO)
+	var bottom_right: Vector2 = _to_world(size)
+	for axis in range(2):
+		var start: float = top_left.x if axis == 0 else top_left.y
+		var stop: float = bottom_right.x if axis == 0 else bottom_right.y
+		var first: float = floorf(start / 500.0) * 500.0
+		var v := first
+		var loops := 0
+		while v <= stop and loops < 150:
+			var p: Vector2 = _to_screen(Vector2(v, 0.0)) if axis == 0 else _to_screen(Vector2(0.0, v))
+			if axis == 0:
+				draw_line(Vector2(p.x, 0.0), Vector2(p.x, size.y), GRID, 1.0)
+			else:
+				draw_line(Vector2(0.0, p.y), Vector2(size.x, p.y), GRID, 1.0)
+			v += 500.0
+			loops += 1
 
 
-func _draw_terrain() -> void:
-	var visible := PackedVector2Array()
+func _draw_ground() -> void:
+	var outline := PackedVector2Array()
 	for point in data.ground_points:
-		visible.append(_to_screen(point))
-	if visible.size() < 2:
-		return
-	var fill := visible.duplicate()
-	var bottom := maxf(size.y + 32.0, _to_screen(Vector2(0.0, data.base_y + data.fill_depth_px)).y)
-	fill.append(Vector2(visible[-1].x, bottom))
-	fill.append(Vector2(visible[0].x, bottom))
-	draw_colored_polygon(fill, COLORS["ground"])
-	draw_polyline(visible, COLORS["grass"], clampf(7.0 * zoom, 2.0, 9.0), true)
-
-
-func _draw_decorations() -> void:
-	for point in data.tree_points:
-		var root: Vector2 = _to_screen(point)
-		if root.x < -60.0 or root.x > size.x + 60.0:
-			continue
-		var height: float = clampf(120.0 * zoom, 6.0, 260.0)
-		draw_line(root, root + Vector2(0, -height), Color(0.31, 0.25, 0.17), maxf(2.0, 13.0 * zoom))
-		draw_circle(root + Vector2(0.0, -height), maxf(3.0, 38.0 * zoom), Color(0.10, 0.33, 0.22))
-	for point in data.rock_points:
-		var p: Vector2 = _to_screen(point)
-		if p.x < -20.0 or p.x > size.x + 20.0:
-			continue
-		draw_circle(p - Vector2(0, maxf(2.0, 10.0 * zoom)), maxf(2.0, 15.0 * zoom), Color(0.45, 0.51, 0.49))
+		outline.append(_to_screen(point))
+	var polygon := outline.duplicate()
+	var bottom: float = maxf(size.y + 24.0, _to_screen(Vector2(0.0, data.base_y + data.fill_depth_px)).y)
+	polygon.append(Vector2(outline[-1].x, bottom))
+	polygon.append(Vector2(outline[0].x, bottom))
+	draw_colored_polygon(polygon, GROUND)
+	draw_polyline(outline, GRASS, clampf(5.5 * zoom, 2.0, 7.0), true)
 
 
 func _draw_markers() -> void:
-	var a := _to_screen(Vector2(100.0, data.ground_y_at(100.0)))
-	var b := _to_screen(Vector2(float(data.width_px) - 100.0, data.ground_y_at(float(data.width_px) - 100.0)))
-	draw_circle(a, 6.0, Color(0.20, 0.70, 0.96))
-	draw_circle(b, 6.0, Color(0.96, 0.69, 0.19))
-	if zoom >= 0.15:
-		draw_string(ThemeDB.fallback_font, a + Vector2(7, -12), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-		draw_string(ThemeDB.fallback_font, b + Vector2(7, -12), "B", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+	var a: Vector2 = _to_screen(data.anchors[0])
+	var b: Vector2 = _to_screen(data.anchors[-1])
+	draw_circle(a, 6.0, Color(0.23, 0.74, 1.0))
+	draw_circle(b, 6.0, Color(1.0, 0.71, 0.28))
+	if zoom > 0.15:
+		draw_string(ThemeDB.fallback_font, a + Vector2(8, -12), "A", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+		draw_string(ThemeDB.fallback_font, b + Vector2(8, -12), "B", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 
 
-func _draw_brush() -> void:
-	if not _mouse_over or tool_mode == "Pan":
+func _draw_anchors() -> void:
+	if tool_mode == "Pan":
 		return
-	draw_arc(_mouse, brush_radius * zoom, 0.0, TAU, 40, Color(0.98, 0.90, 0.42, 0.85), 2.0, true)
+	for i in range(data.anchors.size()):
+		var location: Vector2 = _to_screen(data.anchors[i])
+		if location.x < -15.0 or location.x > size.x + 15.0 or location.y < -15.0 or location.y > size.y + 15.0:
+			continue
+		draw_circle(location, 6.5 if i == selected_index else 4.8, SELECTED if i == selected_index else ANCHOR)
+		draw_arc(location, 8.5 if i == selected_index else 6.6, 0, TAU, 24, Color(0.12, 0.23, 0.25), 1.3, true)
+
+	if selected_index < 0 or selected_index >= data.anchors.size():
+		return
+	var anchor: Vector2 = data.anchors[selected_index]
+	var a: Vector2 = _to_screen(anchor)
+	if selected_index > 0:
+		_draw_handle(a, _to_screen(anchor + data.handles_in[selected_index]))
+	if selected_index < data.anchors.size() - 1:
+		_draw_handle(a, _to_screen(anchor + data.handles_out[selected_index]))
 
 
-func _caption(value: String) -> void:
-	draw_rect(Rect2(0.0, 0.0, size.x, 27.0), Color(0.09, 0.17, 0.20, 0.78))
-	draw_string(ThemeDB.fallback_font, Vector2(12.0, 19.0), value, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
+func _draw_handle(anchor: Vector2, endpoint: Vector2) -> void:
+	if anchor.distance_to(endpoint) < 2.0:
+		return
+	draw_line(anchor, endpoint, HANDLE, 1.7, true)
+	draw_rect(Rect2(endpoint - Vector2(4.0, 4.0), Vector2(8.0, 8.0)), HANDLE, true)
+
+
+func _caption(message: String) -> void:
+	draw_rect(Rect2(0.0, 0.0, size.x, 29.0), Color(0.07, 0.16, 0.20, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(12.0, 20.0), message, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
