@@ -133,6 +133,13 @@ func _begin_edit(screen: Vector2, alt_pressed: bool) -> void:
 	_alt_break_tangent = alt_pressed
 
 	if tool_mode == "Pen":
+		# An existing tangent can also be adjusted with Pen, without
+		# accidentally creating a new anchor on top of the handle.
+		if handle != "":
+			_drag_index = selected_index
+			_drag_mode = handle
+			edit_started.emit()
+			return
 		if anchor_index >= 0:
 			selected_index = anchor_index
 			_drag_index = anchor_index
