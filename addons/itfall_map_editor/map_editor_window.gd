@@ -112,7 +112,7 @@ func _create_ui() -> void:
 	_map_name.placeholder_text = "Map name"
 	sidebar.add_child(_map_name)
 	_map_name.text_changed.connect(_on_name_changed)
-	_width = _spin(sidebar, "Length (px)", 8000.0, 512.0, 100000.0, 256.0)
+	_width = _spin(sidebar, "Length (px)", 8000.0, 512.0, 30000.0, 256.0)
 	_base_y = _spin(sidebar, "Ground Y", 280.0, -2000.0, 5000.0, 20.0)
 	_fill_depth = _spin(sidebar, "Fill depth", 1800.0, 600.0, 10000.0, 100.0)
 	_fill_depth.value_changed.connect(_on_fill_depth_changed)
@@ -237,6 +237,7 @@ func _on_name_changed(new_name: String) -> void:
 	if _syncing or _data == null:
 		return
 	_data.map_name = new_name.strip_edges() if new_name.strip_edges() != "" else "Grassland_AB"
+	_last_scene = ""
 	_dirty = true
 	_refresh_info()
 
@@ -245,6 +246,7 @@ func _on_fill_depth_changed(depth: float) -> void:
 	if _syncing or _data == null:
 		return
 	_data.fill_depth_px = depth
+	_last_scene = ""
 	_dirty = true
 	_canvas.queue_redraw()
 	_refresh_info()
