@@ -1,133 +1,90 @@
-# ItFall Map Editor v0.2 — Standalone Terrain Workspace
+# ItFall Map Editor v0.3 — Flat Terrain + Bézier Pen Tool
 
-**Dành cho Godot 4.7 / SmartShape2D 3.3.2.**
+**Godot 4.7 / SmartShape2D 3.3.2** · Editor độc lập, không cần thao tác SmartShape2D thủ công.
 
-## Mục tiêu
+## Thiết kế mới
 
-**Người thiết kế map chỉ cần dùng ItFall Map Editor để tạo và chỉnh địa hình.** SmartShape2D là **bộ dựng địa hình khi Bake**, không phải công cụ bắt buộc người dùng phải thao tác.
+ItFall không tạo địa hình từ seed trong quy trình chính. Người thiết kế bắt đầu bằng **một mặt đất phẳng** và sử dụng **Pen Tool** giống công cụ vẽ đường cong Bézier trong Photoshop:
 
-Quy trình v2:
+1. **New Flat Map** với chiều dài và cao độ ban đầu.
+2. **Pen**: click để đặt điểm neo; click–giữ–kéo để tạo hai tay đòn tiếp tuyến đối xứng, nối các đoạn thành đường cong mượt.
+3. **Edit**: kéo điểm neo để di chuyển, kéo tay đòn để chỉnh độ dốc; giữ **Alt** khi kéo để điều chỉnh một tay đòn độc lập.
+4. **Save** thành `.tres`: giữ toàn bộ điểm neo và tay đòn.
+5. **Bake SmartShape** thành `.tscn`: đường Bézier được lấy mẫu, xuất SmartShape2D, texture cỏ và collision.
 
-```text
-ItFall Map Editor (cửa sổ riêng trong Godot)
-    ├── Seed + tham số -> Generate
-    ├── Viewport 2D -> Brush (Raise / Lower / Smooth / Flatten)
-    ├── Cây, đá mẫu -> Redistribute
-    ├── Save .tres -> nguồn dữ liệu để chỉnh tiếp
-    └── Bake -> scene .tscn có SmartShape2D + collision
-```
+**Vì gameplay chỉ trên bề mặt**, địa hình được kéo xuống dưới camera và không lộ mặt cắt đất. Đây là hệ thống biên tập *đường mặt đất*, không phải công cụ vẽ hang động.
 
-**Bản .tres là nguồn dữ liệu. Scene .tscn là đầu ra để đưa vào game.** Khi cần chỉnh terrain, mở lại .tres trong ItFall Map Editor rồi Bake một scene mới.
+## Mở cửa sổ Map Editor
 
-## Cách mở
+1. Pull repository `wadracode/ItFall` và mở bằng Godot 4.7.
+2. Bật `ItFall Map Editor` và `SmartShape2D` trong **Project Settings → Plugins** nếu chưa bật.
+3. Chọn **Project → Tools → ItFall Map Editor** (vị trí menu phụ thuộc phiên bản Godot).
+4. Cửa sổ `ItFall Map Editor v0.3 | Pen Tool Terrain` sẽ hiện ra.
 
-1. Pull project `wadracode/ItFall`.
-2. Mở bằng **Godot 4.7**.
-3. SmartShape2D và ItFall Map Editor đã được bật trong `project.godot`. Nếu plugin bị tắt trên máy của bạn, hãy bật lại trong **Project → Project Settings → Plugins**.
-4. Trên thanh menu của Godot, chọn **Project → Tools → ItFall Map Editor** (vị trí menu Tools có thể thay đổi theo bố cục Editor).
-5. Cửa sổ `ItFall Map Editor v2 | Terrain Workspace` xuất hiện.
+Nếu muốn cửa sổ tách riêng khỏi Godot: tắt **Editor Settings → Interface → Editor → Single Window Mode** (khi desktop hỗ trợ).
 
-**Nếu cửa sổ bị nhúng trong Godot** thay vì nổi độc lập: vào **Editor → Editor Settings → Interface → Editor → Single Window Mode**, tắt tùy chọn này. Môi trường desktop Windows/macOS/Linux có hỗ trợ nhiều cửa sổ. Không cần chỉnh `project.godot`.
+## Điều khiển
 
-## Giao diện v2
-
-**Bên trái**: tên map, seed, chiều dài, độ cao, độ biến thiên, khoảng cách đồi, độ sâu fill, mật độ cây/đá và brush.
-
-**Ở giữa**: bản đồ toàn chiều dài. Chuột giữa/chuột phải (khuyên dùng chuột phải) để pan, con lăn để zoom, chuột trái dùng brush được chọn.
-
-**Bên phải**: thông tin hiện tại, trạng thái Save và quy trình Bake.
-
-**Trên cùng**: New, Open .tres, Save, Save As, Bake SmartShape, Open Baked, Fit map.
-
-### Terrain Brushes
-
-| Tool | Ý nghĩa |
+| Thao tác | Chức năng |
 | --- | --- |
-| Pan | Chuột trái/phải kéo để di chuyển màn hình |
-| Raise | Nâng mặt đất |
-| Lower | Hạ mặt đất |
-| Smooth | Làm mượt độ cao |
-| Flatten | Đưa vùng địa hình về cùng cao độ tại thời điểm nhấn chuột |
+| Pen + click chỗ trống | Chèn anchor mới tại tọa độ chuột (theo thứ tự X) |
+| Pen + click, giữ rồi kéo | Tạo/điều chỉnh hai tay đòn tiếp tuyến, nối đường cong mượt |
+| Pen + click kéo anchor có sẵn | Chỉnh tay đòn của anchor đó |
+| Edit + kéo anchor | Di chuyển anchor (giới hạn không vượt qua anchor kề) |
+| Edit + kéo hình vuông màu cam | Kéo tay đòn Bézier |
+| Alt + kéo tay đòn | Không tự đối xứng tay đòn còn lại |
+| Chọn anchor + Delete / nút Delete | Xóa anchor nằm giữa; A và B không xóa |
+| Ctrl+Z / Ctrl+Y | Undo / Redo (khi viewport được focus) |
+| Chuột phải hoặc chuột giữa + kéo | Pan camera của editor |
+| Con lăn | Zoom tại vị trí con trỏ |
+| Fit | Xem toàn bộ chiều ngang map |
 
-- `Radius`: vùng ảnh hưởng của cọ, tính bằng world pixels.
-- `Strength`: cường độ mỗi lượt.
-- `Undo/Redo`: quay lại các lượt brush (tối đa 40 bước).
-- Các điểm đầu/cuối map được giữ nguyên để thuận lợi kết nối tuyến map.
-- Cây và đá tự đổi độ cao theo terrain khi brush hoạt động.
+Hai anchor đầu/cuối luôn ở **X = 0** và **X = Length**, nhưng có thể chỉnh cao độ Y.
+Khi thêm anchor, giữ cách nhau ít nhất 24 px theo trục X. Những tay đòn bị giới hạn theo khoảng cách X để đường cong luôn tiến từ trái sang phải, không tự quấn tạo vòng.
 
-### Chú ý về Generate
+**Lưu ý thao tác:** Một cú click ngắn tạo góc nhọn (tay đòn bằng 0). Click rồi kéo tạo đoạn cong mượt. Sau khi vẽ, dùng Edit chỉnh cho vừa ý.
 
-- **Generate new terrain** áp dụng tham số, tạo một heightmap mới và thay thế terrain đang mở.
-- Để giữ terrain đã chỉnh tay nhưng thay đổi phân bố cây/đá, dùng **Redistribute objects**.
-- Nếu thay đổi seed, chiều dài hoặc thông số noise, phải nhấn Generate để các thay đổi có hiệu lực.
-- Khi Generate, đường dẫn source trước đó được bỏ liên kết; bản cũ vẫn được lưu, không bị ghi đè ngầm.
+## Dữ liệu và xuất scene
 
-## Save và Bake
+`terrain_data.gd` lưu:
 
-| Nút | Tác dụng |
-| --- | --- |
-| Save / Save As | Lưu resource .tres với profile terrain đã sửa |
-| Open .tres | Mở bản dữ liệu để chỉnh tiếp |
-| Bake SmartShape | Tạo .tscn bằng **SS2D_Shape**, collision, cây/đá và marker A/B |
-| Open Baked | Mở scene vừa xuất trong Godot Scene Editor |
+- `anchors`: tọa độ các điểm neo;
+- `handles_in`: tay đòn đi vào, tính tương đối với anchor;
+- `handles_out`: tay đòn đi ra, tính tương đối với anchor;
+- `ground_points`: đường cong được lấy mẫu ở độ phân giải gần 12 px để SmartShape2D và collision sử dụng;
+- `width_px`, `base_y`, `fill_depth_px`: kích thước và độ sâu phủ nền.
 
-File được lưu ở `res://generated_maps/` mặc định.
+File `.tres` là **nguồn để chỉnh sửa**. File `.tscn` đã Bake chỉ là đầu ra. Bake lại sẽ tạo một scene mới (ví dụ `Grassland_AB_bake_001.tscn`), không ghi đè scene trước đó.
 
-Nếu đã có nguồn .tres, mỗi lượt Bake tạo scene mới dạng `<tên>_bake.tscn`, `<tên>_bake_001.tscn`... **không ghi đè** scene được tạo trước đó.
+Baked scene có `SmartShapeGround`, `GroundCollision/SolidGround`, `SkyBackground` và `SpawnPoints/Entrance_A, Entrance_B`.
 
-Nếu chưa từng Save, nút Bake vẫn lưu nguồn .tres cùng một scene mới. Sau đó có thể dùng Save và tiếp tục chỉnh .tres như bình thường.
+Texture mặc định:
+- `res://assets/terrain/grassland/grassland_fill.svg`
+- `res://assets/terrain/grassland/grassland_surface_edge.svg`
 
-Baked scene gồm:
-- `SmartShapeGround`: một **SS2D_Shape** đóng, có fill texture cỏ xuống phía dưới camera, có thể tạo mesh từ dữ liệu generator;
-- `GroundCollision/SolidGround`: **StaticBody2D + CollisionPolygon2D**;
-- `Environment`: cây/đá mẫu dạng Polygon2D;
-- `SpawnPoints/Entrance_A` và `Entrance_B`.
+Bản v0.3 **không tự sinh cây/đá**, cũng chưa có texture picker, biome, parallax, object editor hay preview SmartShape2D trực tiếp. Những chức năng đó tạm để ngoài scope, tập trung hoàn thiện thao tác địa hình.
 
-Scene gốc `res://Terrain.tscn` **không bị thay đổi**. Không cần edit trực tiếp các control point của SmartShape2D để hoàn thành terrain bằng Map Editor.
+## Mở các map đã tạo bằng bản cũ
 
-## Giới hạn hiện tại
+Khi mở `.tres` v0.2 chỉ có `ground_points`, editor chuyển từng điểm mẫu thành **corner anchor** với tay đòn bằng 0. Điều này giữ được đường địa hình cũ nhưng có thể tạo nhiều anchor. Bạn có thể xóa bớt hoặc lưu như nguồn v0.3.
 
-- **Viewport v2 là bản xem trước có thể sculpt**, không phải bản render SmartShape2D 1:1. Texture, lưới mesh và kết quả collision cần xem lại trong scene đã Bake.
-- Biome khác đồng cỏ, hồ nước, texture tùy chọn, công trình, kết nối map runtime, chunk streaming, gameplay chặt cây và multiplayer **chưa triển khai**.
-- Sửa trực tiếp SmartShape2D trong scene sau khi Bake **không tự đồng bộ ngược về .tres**. Muốn dữ liệu có thể tái tạo, hãy chỉnh trong ItFall Map Editor.
-- Kích thước v0.2 giới hạn đến 30.000 px. Đó không phải cam kết hệ thống chunk hiệu năng cao.
-- Chưa có test giao diện trực tiếp trong phiên làm việc tạo mã; cần mở Godot để kiểm tra cửa sổ, thao tác brush và bản baked thực tế.
+Các thuộc tính seed/noise cũ vẫn còn trong Resource để **đọc được file legacy**, nhưng **không xuất hiện trên giao diện và không chi phối việc tạo map mới**.
+
+Các file `terrain_generator.gd`, `editor_dock.gd`, `terrain_preview.gd` là code v0.1–0.2 *không còn được plugin hiện tại sử dụng*.
 
 ## Kiểm thử
 
-Đề xuất:
+Chạy trong root của project sau lần import đầu:
 
-```bash
+```sh
 godot --headless --editor --path . --quit
 godot --headless --path . --script res://addons/itfall_map_editor/tests/smoke_test.gd
 ```
 
-Smoke test kiểm tra seed determinism, không mất brush khi phân bố lại props, lưu/đọc .tres, tạo scene SmartShape + collision và Bake không ghi đè. Test tự xóa các file thử nghiệm nếu thành công.
+Bài test kiểm tra tạo map phẳng, thêm/xóa anchor, đối xứng handles, lấy mẫu Bézier, lưu/đọc .tres, Bake scene SmartShape2D và không ghi đè scene cũ.
 
-**Kiểm tra thủ công bắt buộc sau khi bật plugin:**
-1. Vào Tools → ItFall Map Editor, thử kéo cửa sổ sang màn hình khác.
-2. Generate, zoom, pan, raise, smooth, flatten; thử Undo/Redo.
-3. Save As, đóng cửa sổ, mở lại và Open .tres; địa hình đã sculpt phải giữ nguyên.
-4. Bake SmartShape, Open Baked; xem fill và collision.
-5. Bake lần hai; scene thứ nhất phải còn nguyên.
+**Chưa có kiểm thử tương tác trực tiếp bằng Godot trong môi trường tác giả mã.** Nên test thủ công: Pen click+drag, Edit anchor và handle, Alt-drag, Undo/Redo, Save As → Open, Bake → Open Baked. Đặc biệt kiểm tra collider và hướng lặp texture ở các đoạn dốc.
 
-## Hướng phát triển kế tiếp
+## Nguyên tắc
 
-- Preview dùng trực tiếp SmartShape2D với bộ material/texture đúng biome.
-- Hệ brush chỉnh sửa props, đường, sông, vùng xây dựng và đánh dấu landmarks.
-- Chunks ở cấp map, giảm chi phí lưu/render/collision cho map rất dài.
-- Quy trình đồng bộ thay đổi source từ Scene Editor nếu cần (hiện chưa hỗ trợ).
-
-**Nguyên tắc:** ItFall Map Editor là nơi author terrain. SmartShape2D chỉ là một renderer có thể thay trong tương lai.
-
-
-## Grassland texture defaults (first pass)
-
-The default baker now loads:
-
-- `res://assets/terrain/grassland/grassland_fill.svg` for the green ground **fill**.
-- `res://assets/terrain/grassland/grassland_surface_edge.svg` for the grass **edge**.
-
-These render the green surface down the screen, **without a soil cross-section**. See `assets/terrain/grassland/README.md` for the source texture pack.
-
-**Custom texture import is still not available in the v2 Map Editor UI.** The two above are hard-coded initial defaults and will be replaceable through future material presets. Preview is still schematic; the baked Godot scene shows actual SmartShape textures.
+**Pen Tool dựng đường mặt đất. SmartShape2D dựng hình và collision.** Mọi hệ thống parallax và trang trí cảnh quan sẽ được bổ sung như những thành phần riêng, không làm phức tạp việc vẽ địa hình.
