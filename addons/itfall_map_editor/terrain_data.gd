@@ -28,7 +28,7 @@ const BAKE_STEP := 12.0
 
 
 func create_flat(map_width: int, ground_y: float) -> void:
-	width_px = clampi(map_width, 512, 100000)
+	width_px = clampi(map_width, 512, 30000)
 	base_y = ground_y
 	anchors = PackedVector2Array([Vector2(0.0, ground_y), Vector2(float(width_px), ground_y)])
 	handles_in = PackedVector2Array([Vector2.ZERO, Vector2.ZERO])
@@ -160,7 +160,7 @@ func rebuild() -> void:
 		for step in range(1, count + 1):
 			var t: float = float(step) / float(count)
 			var u: float = 1.0 - t
-			var p: Vector2 = u * u * u * a + 3.0 * u * u * t * b + 3.0 * u * t * t * c + t * t * t * d
+			var p: Vector2 = a * (u * u * u) + b * (3.0 * u * u * t) + c * (3.0 * u * t * t) + d * (t * t * t)
 			# Handles are constrained to monotonically increase X, so the
 			# interpolated height can be searched efficiently by world X.
 			if p.x > samples[-1].x + 0.00001:
@@ -177,7 +177,7 @@ func ground_y_at(x: float) -> float:
 	var left := 0
 	var right := ground_points.size() - 1
 	while right - left > 1:
-		var middle := (left + right) / 2
+		var middle: int = int((left + right) / 2.0)
 		if ground_points[middle].x < query_x:
 			left = middle
 		else:
