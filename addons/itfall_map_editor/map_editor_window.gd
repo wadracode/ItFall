@@ -1,7 +1,6 @@
 @tool
 extends Window
 
-const Generator = preload("res://addons/itfall_map_editor/terrain_generator.gd")
 const Baker = preload("res://addons/itfall_map_editor/map_baker.gd")
 const DataScript = preload("res://addons/itfall_map_editor/terrain_data.gd")
 const TerrainCanvas = preload("res://addons/itfall_map_editor/terrain_canvas.gd")
@@ -10,22 +9,20 @@ var _data
 var _source_path := ""
 var _last_scene := ""
 var _dirty := false
-var _terrain_touched := false
-var _settings_pending := false
-var _syncing_fields := false
+var _syncing := false
+var _pending_action := ""
+var _pending_path := ""
 
-var _fields: Dictionary = {}
 var _map_name: LineEdit
+var _width: SpinBox
+var _base_y: SpinBox
+var _fill_depth: SpinBox
 var _canvas
 var _tool_selector: OptionButton
-var _radius: SpinBox
-var _strength: SpinBox
 var _info: Label
 var _status: Label
-var _undo_stack: Array[PackedVector2Array] = []
-var _redo_stack: Array[PackedVector2Array] = []
-var _flatten_y: float = 0.0
-var _pending_action := ""
+var _undo_stack: Array[Dictionary] = []
+var _redo_stack: Array[Dictionary] = []
 
 var _open_dialog: EditorFileDialog
 var _save_dialog: EditorFileDialog
@@ -33,7 +30,7 @@ var _confirmation: ConfirmationDialog
 
 
 func _init() -> void:
-	title = "ItFall Map Editor v2  |  Terrain Workspace"
+	title = "ItFall Map Editor v0.3  |  Pen Tool Terrain"
 	min_size = Vector2i(980, 620)
 	size = Vector2i(1380, 820)
 	transient = false
@@ -49,7 +46,7 @@ func _ready() -> void:
 
 func _create_dialogs() -> void:
 	_open_dialog = EditorFileDialog.new()
-	_open_dialog.title = "Open ItFall terrain data"
+	_open_dialog.title = "Open editable ItFall terrain"
 	_open_dialog.access = EditorFileDialog.ACCESS_RESOURCES
 	_open_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
 	_open_dialog.add_filter("*.tres", "Terrain data")
@@ -57,7 +54,7 @@ func _create_dialogs() -> void:
 	_open_dialog.file_selected.connect(_open_selected)
 
 	_save_dialog = EditorFileDialog.new()
-	_save_dialog.title = "Save ItFall terrain data"
+	_save_dialog.title = "Save editable ItFall terrain"
 	_save_dialog.access = EditorFileDialog.ACCESS_RESOURCES
 	_save_dialog.file_mode = EditorFileDialog.FILE_MODE_SAVE_FILE
 	_save_dialog.add_filter("*.tres", "Terrain data")
@@ -65,35 +62,35 @@ func _create_dialogs() -> void:
 	_save_dialog.file_selected.connect(_save_selected)
 
 	_confirmation = ConfirmationDialog.new()
-	_confirmation.title = "Unsaved terrain changes"
+	_confirmation.title = "Discard unsaved terrain?"
+	_confirmation.dialog_text = "You have unsaved changes. Continue and discard them?"
 	_confirmation.confirmed.connect(_confirm_action)
 	add_child(_confirmation)
 
 
 func _create_ui() -> void:
-	var base := MarginContainer.new()
-	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	base.add_theme_constant_override("margin_left", 10)
-	base.add_theme_constant_override("margin_right", 10)
-	base.add_theme_constant_override("margin_top", 10)
-	base.add_theme_constant_override("margin_bottom", 10)
-	add_child(base)
+	var frame := MarginContainer.new()
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_theme_constant_override("margin_left", 10)
+	frame.add_theme_constant_override("margin_right", 10)
+	frame.add_theme_constant_override("margin_top", 10)
+	frame.add_theme_constant_override("margin_bottom", 10)
+	add_child(frame)
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 8)
-	base.add_child(root)
+	frame.add_child(root)
 
 	var toolbar := HBoxContainer.new()
 	root.add_child(toolbar)
-	_add_button(toolbar, "New", _new_map)
+	_add_button(toolbar, "New Flat Map", _new_map)
 	_add_button(toolbar, "Open .tres", _open_file)
 	_add_button(toolbar, "Save", _save)
 	_add_button(toolbar, "Save As...", _save_as)
 	_add_button(toolbar, "Bake SmartShape", _bake)
 	_add_button(toolbar, "Open Baked", _open_baked)
 	toolbar.add_spacer(false)
-	var fit := _add_button(toolbar, "Fit map", _fit)
-	fit.tooltip_text = "Fit the complete map width in the viewport."
+	_add_button(toolbar, "Fit", _fit)
 
 	var main := HBoxContainer.new()
 	main.add_theme_constant_override("separation", 10)
@@ -101,51 +98,43 @@ func _create_ui() -> void:
 	root.add_child(main)
 
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(270, 0)
+	scroll.custom_minimum_size = Vector2(260.0, 0.0)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main.add_child(scroll)
 	var sidebar := VBoxContainer.new()
 	sidebar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sidebar.add_theme_constant_override("separation", 7)
+	sidebar.add_theme_constant_override("separation", 9)
 	scroll.add_child(sidebar)
 
-	_heading(sidebar, "MAP GENERATOR")
+	_heading(sidebar, "FLAT MAP SETUP")
 	_map_name = LineEdit.new()
 	_map_name.text = "Grassland_AB"
 	_map_name.placeholder_text = "Map name"
 	sidebar.add_child(_map_name)
-	_map_name.text_changed.connect(_on_settings_changed)
+	_map_name.text_changed.connect(_on_name_changed)
+	_width = _spin(sidebar, "Length (px)", 8000.0, 512.0, 100000.0, 256.0)
+	_base_y = _spin(sidebar, "Ground Y", 280.0, -2000.0, 5000.0, 20.0)
+	_fill_depth = _spin(sidebar, "Fill depth", 1800.0, 600.0, 10000.0, 100.0)
+	_fill_depth.value_changed.connect(_on_fill_depth_changed)
+	_add_button(sidebar, "Create new flat terrain", _new_map)
+	_small_text(sidebar, "Length and Ground Y apply to the next NEW map. Fill depth is editable anytime.")
 
-	_field(sidebar, "Seed", "seed", 12345.0, 0.0, 2147483647.0, 1.0)
-	_field(sidebar, "Length", "width_px", 8000.0, 1024.0, 30000.0, 256.0)
-	_field(sidebar, "Sample step", "sample_step_px", 64.0, 32.0, 256.0, 16.0)
-	_field(sidebar, "Ground Y", "base_y", 280.0, -500.0, 1500.0, 10.0)
-	_field(sidebar, "Hill height", "hill_amplitude", 110.0, 0.0, 550.0, 10.0)
-	_field(sidebar, "Hill scale", "hill_span_px", 1800.0, 250.0, 8000.0, 50.0)
-	_field(sidebar, "Fill depth", "fill_depth_px", 1800.0, 900.0, 4000.0, 100.0)
-
-	_add_button(sidebar, "Generate new terrain", _request_generate)
-	_small_text(sidebar, "Generate replaces the profile in the viewport. Sculpting happens below.")
-
-	_heading(sidebar, "TERRAIN BRUSHES")
+	_heading(sidebar, "PEN TOOL")
 	_tool_selector = OptionButton.new()
-	for tool in ["Pan", "Raise", "Lower", "Smooth", "Flatten"]:
-		_tool_selector.add_item(tool)
+	for mode in ["Pen", "Edit", "Pan"]:
+		_tool_selector.add_item(mode)
 	sidebar.add_child(_tool_selector)
 	_tool_selector.item_selected.connect(_select_tool)
-	_radius = _custom_field(sidebar, "Radius", 190.0, 25.0, 800.0, 25.0)
-	_strength = _custom_field(sidebar, "Strength", 16.0, 1.0, 80.0, 1.0)
-	_radius.value_changed.connect(_brush_settings_changed)
-	var history_bar := HBoxContainer.new()
-	sidebar.add_child(history_bar)
-	_add_button(history_bar, "Undo", _undo).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_add_button(history_bar, "Redo", _redo).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_small_text(sidebar, "PEN: Click to create an anchor. Click + drag to pull two tangent handles and draw a smooth curve. Click an existing anchor + drag to reshape its tangent.")
+	_small_text(sidebar, "EDIT: Drag the selected anchor or its orange tangent handles. Hold Alt while dragging a handle to break symmetry.")
+	_small_text(sidebar, "The two endpoints A/B are always kept at the map boundaries (X=0 / X=Length).")
 
-	_heading(sidebar, "ENVIRONMENT")
-	_field(sidebar, "Trees / 1k px", "trees_per_km", 6.0, 0.0, 30.0, 1.0)
-	_field(sidebar, "Rocks / 1k px", "rocks_per_km", 9.0, 0.0, 30.0, 1.0)
-	_add_button(sidebar, "Redistribute objects", _redistribute)
-	_small_text(sidebar, "Trees and rocks are placeholders. Sculpt edits automatically reposition them.")
+	var history := HBoxContainer.new()
+	sidebar.add_child(history)
+	_add_button(history, "Undo", _undo).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_button(history, "Redo", _redo).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_add_button(sidebar, "Delete selected anchor", _delete_selected)
+	_small_text(sidebar, "Delete cannot remove endpoint A or B. Ctrl+Z / Ctrl+Y also work when the viewport is focused.")
 
 	var center := VBoxContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -153,44 +142,45 @@ func _create_ui() -> void:
 	main.add_child(center)
 
 	_canvas = TerrainCanvas.new()
-	_canvas.custom_minimum_size = Vector2(400, 320)
+	_canvas.custom_minimum_size = Vector2(400.0, 320.0)
 	_canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_canvas.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.add_child(_canvas)
-	_canvas.stroke_started.connect(_stroke_start)
-	_canvas.stroke_moved.connect(_stroke_move)
-	_canvas.stroke_finished.connect(_stroke_finish)
-	_canvas.brush_radius = _radius.value
+	_canvas.edit_started.connect(_edit_started)
+	_canvas.edit_changed.connect(_edit_changed)
+	_canvas.edit_finished.connect(_edit_finished)
+	_canvas.undo_requested.connect(_undo)
+	_canvas.redo_requested.connect(_redo)
 
-	var view_toolbar := HBoxContainer.new()
-	center.add_child(view_toolbar)
-	_add_button(view_toolbar, "−", _zoom_out)
-	_add_button(view_toolbar, "+", _zoom_in)
-	_add_button(view_toolbar, "Fit", _fit)
+	var viewbar := HBoxContainer.new()
+	center.add_child(viewbar)
+	_add_button(viewbar, "−", _zoom_out)
+	_add_button(viewbar, "+", _zoom_in)
+	_add_button(viewbar, "Fit", _fit)
 	var grid := CheckBox.new()
 	grid.text = "Grid"
 	grid.button_pressed = true
 	grid.toggled.connect(_grid_toggled)
-	view_toolbar.add_child(grid)
-	_small_text(view_toolbar, "Wheel: zoom  |  RMB: pan  |  LMB: edit")
+	viewbar.add_child(grid)
+	_small_text(viewbar, "Mouse wheel: zoom  |  Right / middle drag: pan  |  Left: Pen / Edit")
 
 	var right := VBoxContainer.new()
 	right.custom_minimum_size.x = 200
 	main.add_child(right)
-	_heading(right, "WORKSPACE")
+	_heading(right, "CURRENT MAP")
 	_info = Label.new()
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	right.add_child(_info)
-	_heading(right, "EXPORT PIPELINE")
-	_small_text(right, "1. Generate from Seed\n2. Sculpt the terrain\n3. Save source .tres\n4. Bake .tscn\n5. Run your scene")
-	_heading(right, "SMARTSHAPE2D")
-	_small_text(right, "The baker creates SmartShape2D + solid collision automatically. You do not need to edit its points by hand.")
-	_heading(right, "IMPORTANT")
-	_small_text(right, "This is a 2D authoring view, not a live game. Editing a previously baked scene directly will not sync back into .tres. Re-baking creates a new scene, preserving older outputs.")
+	_heading(right, "WORKFLOW")
+	_small_text(right, "1. New Flat Map\n2. Pen: click + drag curves\n3. Edit anchors and handles\n4. Save editable .tres\n5. Bake SmartShape .tscn")
+	_heading(right, "PREVIEW")
+	_small_text(right, "The green surface is a schematic preview. Bake to inspect the final SmartShape2D grass material and collision.")
+	_heading(right, "SOURCE OF TRUTH")
+	_small_text(right, "Edit the .tres using this tool. Baked .tscn scenes are versioned outputs; manual scene edits will not sync back.")
 
 	_status = Label.new()
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.custom_minimum_size.y = 28
+	_status.custom_minimum_size.y = 28.0
 	root.add_child(_status)
 
 
@@ -205,74 +195,59 @@ func _small_text(parent: Control, value: String) -> void:
 	var label := Label.new()
 	label.text = value
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.modulate = Color(0.74, 0.80, 0.83)
+	label.modulate = Color(0.76, 0.83, 0.86)
 	parent.add_child(label)
 
 
-func _add_button(parent: Control, title_text: String, action: Callable) -> Button:
+func _add_button(parent: Control, text_value: String, callback: Callable) -> Button:
 	var button := Button.new()
-	button.text = title_text
-	button.pressed.connect(action)
+	button.text = text_value
+	button.pressed.connect(callback)
 	parent.add_child(button)
 	return button
 
 
-func _field(parent: Control, label_text: String, field_name: String, initial: float, minimum: float, maximum: float, step_value: float) -> void:
-	var spin := _custom_field(parent, label_text, initial, minimum, maximum, step_value)
-	_fields[field_name] = spin
-	spin.value_changed.connect(_on_settings_changed)
-
-
-func _custom_field(parent: Control, label_text: String, initial: float, minimum: float, maximum: float, step_value: float) -> SpinBox:
+func _spin(parent: Control, label_text: String, initial: float, minimum: float, maximum: float, increment: float) -> SpinBox:
 	var row := HBoxContainer.new()
 	parent.add_child(row)
 	var label := Label.new()
 	label.text = label_text
-	label.custom_minimum_size.x = 110.0
+	label.custom_minimum_size.x = 114.0
 	row.add_child(label)
 	var spin := SpinBox.new()
 	spin.min_value = minimum
 	spin.max_value = maximum
-	spin.step = step_value
+	spin.step = increment
 	spin.value = initial
 	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spin)
 	return spin
 
 
-func _settings() -> Dictionary:
-	var settings: Dictionary = {"map_name": _map_name.text.strip_edges()}
-	if settings["map_name"] == "":
-		settings["map_name"] = "Grassland_AB"
-	for key in _fields:
-		settings[key] = (_fields[key] as SpinBox).value
-	return settings
-
-
-func _sync_fields_from_data() -> void:
-	_syncing_fields = true
+func _sync_ui() -> void:
+	_syncing = true
 	_map_name.text = _data.map_name
-	for key in _fields.keys():
-		(_fields[key] as SpinBox).value = _data.get(key)
-	_syncing_fields = false
-	_settings_pending = false
+	_width.value = float(_data.width_px)
+	_base_y.value = _data.base_y
+	_fill_depth.value = _data.fill_depth_px
+	_syncing = false
 
 
-func _on_settings_changed(_value: Variant = null) -> void:
-	if _syncing_fields or _data == null:
+func _on_name_changed(new_name: String) -> void:
+	if _syncing or _data == null:
 		return
-	var desired_name := _map_name.text.strip_edges()
-	if desired_name == "":
-		desired_name = "Grassland_AB"
-	if _data.map_name != desired_name:
-		_data.map_name = desired_name
-		_dirty = true
-	_settings_pending = _terrain_settings_differ() or _prop_settings_differ()
+	_data.map_name = new_name.strip_edges() if new_name.strip_edges() != "" else "Grassland_AB"
+	_dirty = true
 	_refresh_info()
-	if _settings_pending:
-		_set_status("Parameters pending. Generate for terrain changes; Redistribute for trees/rocks.")
-	else:
-		_set_status("Map name updated. Save or Bake when ready.")
+
+
+func _on_fill_depth_changed(depth: float) -> void:
+	if _syncing or _data == null:
+		return
+	_data.fill_depth_px = depth
+	_dirty = true
+	_canvas.queue_redraw()
+	_refresh_info()
 
 
 func _new_map() -> void:
@@ -280,67 +255,37 @@ func _new_map() -> void:
 
 
 func _new_map_now() -> void:
-	_data = Generator.create(_settings())
+	_data = DataScript.new()
+	_data.map_name = _map_name.text.strip_edges() if _map_name.text.strip_edges() != "" else "Grassland_AB"
+	_data.fill_depth_px = _fill_depth.value
+	_data.create_flat(int(_width.value), _base_y.value)
 	_source_path = ""
 	_last_scene = ""
 	_dirty = true
-	_terrain_touched = false
-	_settings_pending = false
 	_undo_stack.clear()
 	_redo_stack.clear()
 	_canvas.set_data(_data, true)
 	_refresh_info()
-	_set_status("New terrain from seed %d. Drag with sculpt tools, then Save or Bake." % _data.seed)
-
-
-func _request_generate() -> void:
-	if _terrain_touched:
-		_confirm_or_perform("generate")
-	else:
-		_generate_now()
-
-
-func _generate_now() -> void:
-	_data = Generator.create(_settings())
-	# A regenerated map becomes a new source. Never overwrite an old hand-edited .tres.
-	_source_path = ""
-	_last_scene = ""
-	_dirty = true
-	_terrain_touched = false
-	_settings_pending = false
-	_undo_stack.clear()
-	_redo_stack.clear()
-	_canvas.set_data(_data, true)
-	_refresh_info()
-	_set_status("Generated a new profile. Source and any previous bakes are preserved.")
+	_set_status("Flat map created. Select Pen and click + drag to draw a smooth hill or valley.")
 
 
 func _confirm_or_perform(action: String) -> void:
-	if not _dirty:
-		_pending_action = action
-		_confirm_action()
-		return
 	_pending_action = action
-	_confirmation.dialog_text = "There are unsaved changes. Continue and discard them?"
-	_confirmation.popup_centered()
+	if _dirty:
+		_confirmation.popup_centered()
+	else:
+		_confirm_action()
 
 
 func _confirm_action() -> void:
 	match _pending_action:
 		"new":
 			_new_map_now()
-		"generate":
-			_generate_now()
 		"close":
 			hide()
-		"open":
-			_open_dialog.popup_centered_ratio(0.8)
 		"load":
 			_load_map(_pending_path)
 	_pending_action = ""
-
-
-var _pending_path := ""
 
 
 func _request_close() -> void:
@@ -352,33 +297,30 @@ func _open_file() -> void:
 
 
 func _open_selected(path: String) -> void:
-	if _dirty:
-		_pending_path = path
-		_confirm_or_perform("load")
-	else:
-		_load_map(path)
+	_pending_path = path
+	_confirm_or_perform("load")
 
 
 func _load_map(path: String) -> void:
-	var loaded := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
+	var loaded = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
 	if loaded == null or loaded.get_script() != DataScript:
-		_set_status("Not an ItFall terrain data .tres: " + path)
+		_set_status("Not a valid ItFall terrain .tres: " + path)
 		return
-	if loaded.ground_points.size() < 3:
-		_set_status("Invalid terrain data: not enough terrain samples.")
+	if loaded.ground_points.size() < 2 and loaded.anchors.size() < 2:
+		_set_status("Terrain resource has no valid surface.")
 		return
+	var migrated: bool = loaded.anchors.size() < 2
+	loaded.ensure_editable()
 	_data = loaded
 	_source_path = path
 	_last_scene = ""
-	_dirty = false
-	_terrain_touched = false
-	_settings_pending = false
+	_dirty = migrated
 	_undo_stack.clear()
 	_redo_stack.clear()
-	_sync_fields_from_data()
+	_sync_ui()
 	_canvas.set_data(_data, true)
 	_refresh_info()
-	_set_status("Opened source: " + path)
+	_set_status("Opened %s%s" % [path, " (legacy profile converted to corner anchors; save to keep it)" if migrated else ""])
 
 
 func _save() -> void:
@@ -391,9 +333,11 @@ func _save() -> void:
 
 
 func _save_as() -> void:
+	if _data == null:
+		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://generated_maps"))
 	_save_dialog.current_dir = "res://generated_maps"
-	_save_dialog.current_file = Baker._safe_name(_data.map_name) + "_" + str(_data.seed) + ".tres"
+	_save_dialog.current_file = Baker._safe_name(_data.map_name) + ".tres"
 	_save_dialog.popup_centered_ratio(0.8)
 
 
@@ -405,10 +349,7 @@ func _save_selected(path: String) -> void:
 
 func _save_to_path(path: String) -> bool:
 	if _data == null or not path.begins_with("res://"):
-		_set_status("Invalid map save path.")
-		return false
-	if _settings_pending:
-		_set_status("Generator settings were changed but not applied. Click Generate first or restore the prior values.")
+		_set_status("Save path must be under res://.")
 		return false
 	var error: Error = ResourceSaver.save(_data, path)
 	if error != OK:
@@ -418,15 +359,12 @@ func _save_to_path(path: String) -> bool:
 	_dirty = false
 	EditorInterface.get_resource_filesystem().scan()
 	_refresh_info()
-	_set_status("Saved editable map: " + path)
+	_set_status("Saved editable terrain: " + path)
 	return true
 
 
 func _bake() -> void:
 	if _data == null:
-		return
-	if _settings_pending:
-		_set_status("Click Generate to apply settings before baking.")
 		return
 	var result: Dictionary = Baker.bake(_data, _source_path)
 	if not result.get("ok", false):
@@ -437,43 +375,14 @@ func _bake() -> void:
 	_dirty = false
 	EditorInterface.get_resource_filesystem().scan()
 	_refresh_info()
-	_set_status("Baked scene: %s\nEditable source: %s" % [_last_scene, _source_path])
+	_set_status("Baked: %s\nSource: %s" % [_last_scene, _source_path])
 
 
 func _open_baked() -> void:
 	if _last_scene == "":
-		_set_status("No scene baked in this session yet.")
+		_set_status("Bake a map first.")
 		return
 	EditorInterface.open_scene_from_path(_last_scene)
-
-
-func _redistribute() -> void:
-	if _data == null:
-		return
-	_data.map_name = _map_name.text.strip_edges()
-	_data.trees_per_km = float((_fields["trees_per_km"] as SpinBox).value)
-	_data.rocks_per_km = float((_fields["rocks_per_km"] as SpinBox).value)
-	Generator.regenerate_props(_data)
-	_dirty = true
-	_settings_pending = _terrain_settings_differ()
-	_canvas.queue_redraw()
-	_refresh_info()
-	_set_status("Repositioned trees and rocks without regenerating terrain.")
-
-
-func _prop_settings_differ() -> bool:
-	if _data == null:
-		return false
-	return not is_equal_approx((_fields["trees_per_km"] as SpinBox).value, _data.trees_per_km) or not is_equal_approx((_fields["rocks_per_km"] as SpinBox).value, _data.rocks_per_km)
-
-
-func _terrain_settings_differ() -> bool:
-	if _data == null:
-		return false
-	for key in ["seed", "width_px", "sample_step_px", "base_y", "hill_amplitude", "hill_span_px", "fill_depth_px"]:
-		if not is_equal_approx(float((_fields[key] as SpinBox).value), float(_data.get(key))):
-			return true
-	return false
 
 
 func _select_tool(index: int) -> void:
@@ -481,97 +390,63 @@ func _select_tool(index: int) -> void:
 	_canvas.queue_redraw()
 
 
-func _brush_settings_changed(_value: float) -> void:
-	_canvas.brush_radius = _radius.value
+func _snapshot() -> Dictionary:
+	return {
+		"anchors": _data.anchors.duplicate(),
+		"handles_in": _data.handles_in.duplicate(),
+		"handles_out": _data.handles_out.duplicate()
+	}
+
+
+func _restore(snapshot: Dictionary) -> void:
+	_data.anchors = snapshot["anchors"].duplicate()
+	_data.handles_in = snapshot["handles_in"].duplicate()
+	_data.handles_out = snapshot["handles_out"].duplicate()
+	_data.rebuild()
+	_canvas.selected_index = -1
 	_canvas.queue_redraw()
-
-
-func _stroke_start(pos: Vector2) -> void:
-	if _data == null:
-		return
-	_undo_stack.append(_data.ground_points.duplicate())
-	if _undo_stack.size() > 40:
-		_undo_stack.pop_front()
-	_redo_stack.clear()
-	_flatten_y = _data.ground_y_at(pos.x)
-	_apply_brush(pos)
-
-
-func _stroke_move(pos: Vector2) -> void:
-	_apply_brush(pos)
-
-
-func _stroke_finish() -> void:
+	_dirty = true
 	_refresh_info()
 
 
-func _apply_brush(pos: Vector2) -> void:
-	var originals: PackedVector2Array = _data.ground_points
-	var next_points: PackedVector2Array = originals.duplicate()
-	var mode: String = _canvas.tool_mode
-	var radius: float = _radius.value
-	var strength: float = _strength.value
-	for i in range(1, originals.size() - 1):
-		var point: Vector2 = originals[i]
-		var distance: float = absf(point.x - pos.x)
-		if distance > radius:
-			continue
-		var weight: float = pow(1.0 - distance / radius, 2.0)
-		match mode:
-			"Raise":
-				point.y -= strength * weight
-			"Lower":
-				point.y += strength * weight
-			"Flatten":
-				point.y = lerpf(point.y, _flatten_y, clampf(strength / 38.0 * weight, 0.0, 1.0))
-			"Smooth":
-				var start: int = maxi(i - 2, 0)
-				var stop: int = mini(i + 2, originals.size() - 1)
-				var mean_y := 0.0
-				for j in range(start, stop + 1):
-					mean_y += originals[j].y
-				mean_y /= float(stop - start + 1)
-				point.y = lerpf(point.y, mean_y, clampf(strength / 28.0 * weight, 0.0, 1.0))
-		point.y = clampf(point.y, _data.base_y - 900.0, _data.base_y + 900.0)
-		next_points[i] = point
-	_data.ground_points = next_points
-	_reproject_props()
+func _edit_started() -> void:
+	if _data == null:
+		return
+	_undo_stack.append(_snapshot())
+	if _undo_stack.size() > 60:
+		_undo_stack.pop_front()
+	_redo_stack.clear()
+
+
+func _edit_changed() -> void:
 	_dirty = true
-	_terrain_touched = true
+	_last_scene = ""
 	_canvas.queue_redraw()
+	_refresh_info()
 
 
-func _reproject_props() -> void:
-	var trees := PackedVector2Array()
-	for point in _data.tree_points:
-		trees.append(Vector2(point.x, _data.ground_y_at(point.x)))
-	_data.tree_points = trees
-	var rocks := PackedVector2Array()
-	for point in _data.rock_points:
-		rocks.append(Vector2(point.x, _data.ground_y_at(point.x)))
-	_data.rock_points = rocks
+func _edit_finished() -> void:
+	_refresh_info()
 
 
 func _undo() -> void:
 	if _data == null or _undo_stack.is_empty():
 		return
-	_redo_stack.append(_data.ground_points.duplicate())
-	_data.ground_points = _undo_stack.pop_back()
-	_reproject_props()
-	_dirty = true
-	_canvas.queue_redraw()
-	_set_status("Undo terrain stroke.")
+	_redo_stack.append(_snapshot())
+	_restore(_undo_stack.pop_back())
+	_set_status("Undo terrain edit.")
 
 
 func _redo() -> void:
 	if _data == null or _redo_stack.is_empty():
 		return
-	_undo_stack.append(_data.ground_points.duplicate())
-	_data.ground_points = _redo_stack.pop_back()
-	_reproject_props()
-	_dirty = true
-	_canvas.queue_redraw()
-	_set_status("Redo terrain stroke.")
+	_undo_stack.append(_snapshot())
+	_restore(_redo_stack.pop_back())
+	_set_status("Redo terrain edit.")
+
+
+func _delete_selected() -> void:
+	_canvas.delete_selected()
 
 
 func _zoom_in() -> void:
@@ -586,25 +461,25 @@ func _fit() -> void:
 	_canvas.fit_to_data()
 
 
-func _grid_toggled(value: bool) -> void:
-	_canvas.show_grid = value
+func _grid_toggled(enabled: bool) -> void:
+	_canvas.show_grid = enabled
 	_canvas.queue_redraw()
 
 
 func _refresh_info() -> void:
 	if _data == null or _info == null:
 		return
-	_info.text = "Seed: %d\nWidth: %d px\nPoints: %d\nTrees: %d\nRocks: %d\n\nSource:\n%s\n\n%s" % [
-		_data.seed,
+	_info.text = "Length: %d px\nAnchors: %d\nCurve samples: %d\nGround Y: %.0f\n\nSelected: %s\n\nEditable source:\n%s\n\n%s" % [
 		_data.width_px,
+		_data.anchors.size(),
 		_data.ground_points.size(),
-		_data.tree_points.size(),
-		_data.rock_points.size(),
-		_source_path if _source_path != "" else "(not saved yet)",
+		_data.base_y,
+		str(_canvas.selected_index + 1) if _canvas.selected_index >= 0 else "(none)",
+		_source_path if _source_path != "" else "(not saved)",
 		"Unsaved changes" if _dirty else "Saved"
 	]
 
 
-func _set_status(value: String) -> void:
+func _set_status(message: String) -> void:
 	if _status != null:
-		_status.text = value
+		_status.text = message
