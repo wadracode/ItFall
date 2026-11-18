@@ -29,6 +29,7 @@ var _drag_index := -1
 var _mouse := Vector2.ZERO
 var _mouse_over := false
 var _alt_break_tangent := false
+var _pending_drag_start := false
 
 
 func _ready() -> void:
@@ -105,8 +106,9 @@ func _gui_input(event: InputEvent) -> void:
 				else:
 					_begin_edit(button.position, button.alt_pressed)
 			else:
-				if _drag_mode != "":
+				if _drag_mode != "" and not _pending_drag_start:
 					edit_finished.emit()
+				_pending_drag_start = false
 				_drag_mode = ""
 				_drag_index = -1
 				if tool_mode == "Pan":
@@ -138,18 +140,21 @@ func _begin_edit(screen: Vector2, alt_pressed: bool) -> void:
 		if handle != "":
 			_drag_index = selected_index
 			_drag_mode = handle
-			edit_started.emit()
+			_pending_drag_start = true
 			return
 		if anchor_index >= 0:
 			selected_index = anchor_index
 			_drag_index = anchor_index
 			# Clicking an existing anchor and dragging adjusts its outgoing tangent.
 			_drag_mode = "out" if anchor_index < data.anchors.size() - 1 else "in"
-			edit_started.emit()
+			_pending_drag_start = true
 			return
 		var world: Vector2 = _to_world(screen)
 		if world.x <= 0.0 or world.x >= float(data.width_px):
 			return
+		for point in data.anchors:
+			if absf(point.x - world.x) < data.MIN_ANCHOR_SPACING:
+				return
 		edit_started.emit()
 		var added: int = data.insert_anchor(world)
 		if added < 0:
@@ -165,12 +170,12 @@ func _begin_edit(screen: Vector2, alt_pressed: bool) -> void:
 	if handle != "":
 		_drag_index = selected_index
 		_drag_mode = handle
-		edit_started.emit()
+		_pending_drag_start = true
 	elif anchor_index >= 0:
 		selected_index = anchor_index
 		_drag_index = anchor_index
 		_drag_mode = "anchor"
-		edit_started.emit()
+		_pending_drag_start = true
 	else:
 		selected_index = -1
 
@@ -179,6 +184,9 @@ func _update_edit(screen: Vector2, alt_pressed: bool) -> void:
 	if _drag_index < 0:
 		return
 	var world: Vector2 = _to_world(screen)
+	if _pending_drag_start:
+		edit_started.emit()
+		_pending_drag_start = false
 	match _drag_mode:
 		"anchor":
 			data.move_anchor(_drag_index, world)
